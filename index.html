@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>A0nynx_3i · Lucid White</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#F8F8FA">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="https://dji-glb.livechat-support.com/yc-media/getFile?id=54825747a87e43aaabec70ea86f9d310&sessionId=q2i8U6Jc.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Space+Grotesk:wght@300;400;500;700;900&family=Great+Vibes&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+
+    <link rel="stylesheet" href="css/-A-00-variables.css">
+    <link rel="stylesheet" href="css/-A-01-frame.css">
+    <link rel="stylesheet" href="css/-A-02-theme.css">
+    <link rel="stylesheet" href="css/-A-03-desktop.css">
+    <link rel="stylesheet" href="css/-A-04-widgets.css">
+    <link rel="stylesheet" href="css/-A-05-chat-app.css">
+    <link rel="stylesheet" href="css/-A-06-chat-detail.css">
+    <link rel="stylesheet" href="css/-A-07-chat-room.css">
+    <link rel="stylesheet" href="css/-A-08-chat-detail-alt.css">
+    <link rel="stylesheet" href="css/-A-09-chat-detail-alt-settings.css">
+    <link rel="stylesheet" href="css/-A-10-splash.css">
+</head>
+<body>
+    <div id="app-splash">
+        <div class="sp-arc sp-arc-1"></div>
+        <div class="sp-arc sp-arc-2"></div>
+        <div class="sp-arc sp-arc-3"></div>
+        <div class="sp-dots"><div class="sp-dot"></div><div class="sp-dot"></div><div class="sp-dot"></div></div>
+        <div class="sp-logo">
+            <div class="sp-icon"><span class="sp-icon-face">՞•ﻌ•՞</span></div>
+            <div class="sp-brand">A0nynx_3i</div>
+            <div class="sp-bar-wrap"><div class="sp-bar"></div></div>
+        </div>
+        <div class="sp-sig">Aesthetic</div>
+    </div>
+    <div class="viewport" id="main-frame">
+
+        <!-- 背景层 -->
+        <div class="architectural-light"></div>
+        <div class="texture-noise"></div>
+        <div class="bg-watermark">Aesthetic</div>
+
+        <!-- 状态栏 -->
+        <div class="status-bar">
+            <div class="time" id="desktop-clock">09:41</div>
+            <div class="status-icons">
+                <svg viewBox="0 0 24 24"><path d="M2 22h20V2z" fill="currentColor"/></svg>
+                <svg viewBox="0 0 24 24" style="width:16px;">
+                    <path d="M17 4h-3V2h-4v2H7v18h10V4zm1 0c1.1 0 2 .9 2 2v14c0 1.1-.9 2-2 2H6c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2h1V2h6v2h1z" fill="currentColor"/>
+                </svg>
+            </div>
+        </div>
+
+        <!-- 分页容器 -->
+        <div class="desktop-swiper" id="swiper">
+            <div class="desktop-page" id="page1"></div>
+            <div class="desktop-page" id="page2"></div>
+        </div>
+
+        <!-- 分页点 -->
+        <div class="page-dots">
+            <div class="dot active" id="dot1"></div>
+            <div class="dot" id="dot2"></div>
+        </div>
+
+    </div>
+
+    <script src="js/-A-00-utils.js"></script>
+    <script src="js/-A-01-app.js"></script>
+    <script src="js/-A-02-chat-db.js"></script>
+    <script src="js/-A-03-chat-detail-ui.js"></script>
+    <script src="js/-A-04-cloud-sync.js"></script>
+    <script src="js/-A-05-chat-app.js"></script>
+    <script src="js/-A-06-settings-hub.js"></script>
+    <script src="js/-A-07-lens-app.js"></script>
+    <script src="js/-A-08-worldbook-app.js"></script>
+    <script src="js/-A-09-private-space.js"></script>
+    <script src="js/-A-10-invite-popup.js"></script>
+    <script src="js/-A-11-theatre-app.js"></script>
+    <script src="js/-A-12-theatre-scene.js"></script>
+    <script src="js/-A-13-chat-room.js"></script>
+    <script src="js/-A-14-chat-detail-alt.js"></script>
+    <script src="js/-A-15-chat-detail-alt-settings.js"></script>
+    <script src="js/-A-16-entity-list.js"></script>
+    <script src="js/-A-17-me-page.js"></script>
+    <script src="js/-A-18-errbook.js"></script>
+    <script src="js/-A-19-api-fab.js"></script>
+    <script src="js/-A-20-multi-select.js"></script>
+    <script src="js/-A-21-heart-voice.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('./sw.js').then(function(registration) {
+                    console.log('ServiceWorker registration successful');
+                }).catch(function(err) {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            });
+        }
+    </script>
+    <script>
+        window.addEventListener('load',function(){
+            setTimeout(function(){
+                var sp=document.getElementById('app-splash');
+                if(sp){sp.classList.add('fade-out');setTimeout(function(){sp.remove();},600);}
+            },800);
+        });
+    </script>
+</body>
+</html>

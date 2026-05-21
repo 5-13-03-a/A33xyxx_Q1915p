@@ -1,0 +1,27 @@
+{
+  "name": "A0nynx_3i",
+  "short_name": "A0nynx_3i",
+  "id": "./index.html",
+  "description": "A0nynx_3i — Studio Zero Standalone App",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#111111",
+  "theme_color": "#111111",
+  "lang": "zh-CN",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://dji-glb.livechat-support.com/yc-media/getFile?id=54825747a87e43aaabec70ea86f9d310&sessionId=q2i8U6Jc.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://dji-glb.livechat-support.com/yc-media/getFile?id=54825747a87e43aaabec70ea86f9d310&sessionId=q2i8U6Jc.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
