@@ -315,23 +315,34 @@ function closeChatRoom(){
 
 window.openChatRoom=function(){
     build();
-    // 每次打开都从 ChatDB 加载最新数据
+    var el=document.getElementById('chatRoomApp');
+    el.classList.remove('closing');
+    el.classList.add('active');
+    // 如果内存已有数据，先立即渲染（零延迟）
+    if(window._caEntities&&window._caEntities.length){
+        render();
+    }
+    // 再异步从 DB 更新（静默刷新）
     if(typeof ChatDB!=='undefined'){
         ChatDB.loadEntities(function(ents){
             if(ents&&ents.length)window._caEntities=ents;
             ChatDB.loadAllConversations(function(convs){
-                if(convs)window._caConversations=convs;
+                if(convs){
+                    // 只更新非当前聊天的对话（当前聊天以内存为准）
+                    var currentId=window._cdaCurrentEntId;
+                    var keys=Object.keys(convs);
+                    for(var i=0;i<keys.length;i++){
+                        var k=keys[i];
+                        if(k===currentId)continue;
+                        if(!window._caConversations)window._caConversations={};
+                        window._caConversations[k]=convs[k];
+                    }
+                }
                 render();
-                var el=document.getElementById('chatRoomApp');
-                el.classList.remove('closing');
-                el.classList.add('active');
             });
         });
     }else{
         render();
-        var el=document.getElementById('chatRoomApp');
-        el.classList.remove('closing');
-        el.classList.add('active');
     }
 };
 

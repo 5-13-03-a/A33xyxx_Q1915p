@@ -300,10 +300,17 @@ function bindEvents(){
     });
 
     // Fetch Voice
-    document.getElementById('hvFetchBtn').addEventListener('click',function(){
-        var btn=this;
+    function doFetch(forceRefresh){
+        var btn=document.getElementById('hvFetchBtn');
         var wrap=document.getElementById('hvTheirWrap');
         var emptyState=document.getElementById('hvEmptyState');
+        if(forceRefresh){
+            _theirVoiceCache=null;
+            // 清除内存缓存，但不删 localStorage（新结果会追加）
+            // 需要临时标记跳过 localStorage 读取
+            _skipStoredCache=true;
+        }
+
         var old=wrap.querySelector('.hv-voice-card');
         if(old)old.remove();
         emptyState.style.display='block';
@@ -311,7 +318,7 @@ function bindEvents(){
         btn.style.opacity='0.35';btn.style.pointerEvents='none';
         fetchTheirVoice(_fetchRounds,function(pool){
             if(!pool||!pool.length){
-                emptyState.innerHTML='<div class="hv-empty-line1">No voice yet</div><div class="hv-empty-line2">their words will appear here</div>';
+                emptyState.innerHTML='<div class="hv-empty-line1">No voice yet</div><div class="hv-empty-line2">请先配置 API Key 后长按调取</div>';
                 btn.style.opacity='1';btn.style.pointerEvents='auto';
                 return;
             }
@@ -337,7 +344,39 @@ function bindEvents(){
             btn.style.opacity='1';btn.style.pointerEvents='auto';
             document.getElementById('hvViewAll').style.display='block';
         });
+    }
+
+    var _fetchBtn=document.getElementById('hvFetchBtn');
+    var _fetchLongTimer=null;
+    var _fetchLongFired=false;
+
+    _fetchBtn.addEventListener('touchstart',function(){
+        _fetchLongFired=false;
+        _fetchLongTimer=setTimeout(function(){
+            _fetchLongFired=true;
+            doFetch(true);
+        },600);
+    },{passive:true});
+    _fetchBtn.addEventListener('touchend',function(){
+        clearTimeout(_fetchLongTimer);
+    },{passive:true});
+    _fetchBtn.addEventListener('touchmove',function(){
+        clearTimeout(_fetchLongTimer);
+    },{passive:true});
+    _fetchBtn.addEventListener('click',function(){
+        if(_fetchLongFired){_fetchLongFired=false;return;}
+        doFetch(false);
     });
+    _fetchBtn.addEventListener('mousedown',function(){
+        _fetchLongFired=false;
+        _fetchLongTimer=setTimeout(function(){
+            _fetchLongFired=true;
+            doFetch(true);
+        },600);
+    });
+    _fetchBtn.addEventListener('mouseup',function(){clearTimeout(_fetchLongTimer);});
+    _fetchBtn.addEventListener('mouseleave',function(){clearTimeout(_fetchLongTimer);});
+
 
     // View All
     var viewAll=document.getElementById('hvViewAll');
@@ -387,11 +426,33 @@ function bindEvents(){
 }
 
 var _cardStyleIdx=0;
-var _theirVoiceCache=null; // 永久缓存
+var _theirVoiceCache=null;
+var _skipStoredCache=false;
+
+function saveTheirCache(arr){
+    _theirVoiceCache=arr;
+    var entId=window._cdaCurrentEntId;
+    if(entId){
+        var existing=[];try{existing=JSON.parse(localStorage.getItem('ca-hv-their-'+entId)||'[]');}catch(e){existing=[];}
+        var merged=existing.concat(arr);
+        localStorage.setItem('ca-hv-their-'+entId,JSON.stringify(merged));
+        _theirVoiceCache=merged;
+    }
+}
+
+var _skipStoredCache=false;
 
 function fetchTheirVoice(rounds,cb){
-    // 如果已有缓存，直接返回（永久可查）
+    // 如果已有内存缓存，直接返回
     if(_theirVoiceCache&&_theirVoiceCache.length){cb(_theirVoiceCache);return;}
+    // 从 localStorage 加载持久化历史（除非强制刷新跳过）
+    if(!_skipStoredCache){
+        var entId=window._cdaCurrentEntId;
+        var stored=[];
+        try{stored=JSON.parse(localStorage.getItem('ca-hv-their-'+entId)||'[]');}catch(e){stored=[];}
+        if(stored.length){_theirVoiceCache=stored;cb(stored);return;}
+    }
+    _skipStoredCache=false;
 
     var entId=window._cdaCurrentEntId;
     if(!entId||!window._caConversations||!window._caConversations[entId]){cb([]);return;}
@@ -410,7 +471,7 @@ function fetchTheirVoice(rounds,cb){
     try{apiConfig=JSON.parse(localStorage.getItem('ca-api-config')||'{}');}catch(e){apiConfig={};}
     var node=apiConfig.node||'primary';
     var cfg=apiConfig[node]||{};
-    if(!cfg.key){var r=extractFromMsgs(assistantMsgs,ent,rounds);_theirVoiceCache=r;cb(r);return;}
+    if(!cfg.key){cb([]);return;}
 
     var ep=(cfg.endpoint||'https://api.openai.com/v1').replace(/\/+$/,'');
     if(ep.indexOf('/chat/completions')===-1){ep+=ep.match(/\/v\d+$/)?'/chat/completions':'/v1/chat/completions';}
@@ -446,14 +507,19 @@ function fetchTheirVoice(rounds,cb){
                 var result=parsed.map(function(item){
                     return {name:dispName,avatar:ent.avatar||'',text:item.text||'',mood:item.mood||'calm',time:item.time||''};
                 });
-                _theirVoiceCache=result;
+                // 追加到持久化历史
+                var entId2=window._cdaCurrentEntId;
+                var existing2=[];try{existing2=JSON.parse(localStorage.getItem('ca-hv-their-'+entId2)||'[]');}catch(e){existing2=[];}
+                var merged=existing2.concat(result);
+                localStorage.setItem('ca-hv-their-'+entId2,JSON.stringify(merged));
+                _theirVoiceCache=merged;
                 cb(result);
                 return;
             }catch(ex){}
         }
-        var r2=extractFromMsgs(assistantMsgs,ent,rounds);_theirVoiceCache=r2;cb(r2);
+        cb([]);
     })
-    .catch(function(){var r3=extractFromMsgs(assistantMsgs,ent,rounds);_theirVoiceCache=r3;cb(r3);});
+    .catch(function(){cb([]);});
 }
 
 function extractFromMsgs(msgs,ent,rounds){
@@ -470,15 +536,35 @@ function extractFromMsgs(msgs,ent,rounds){
 function renderTheirHistory(){
     var history=document.getElementById('hvTheirHistory');
     if(!history)return;
-    // 用缓存数据
-    var pool=_theirVoiceCache||[];
+    var entId=window._cdaCurrentEntId;
+    var pool=[];
+    try{pool=JSON.parse(localStorage.getItem('ca-hv-their-'+entId)||'[]');}catch(e){pool=[];}
     if(!pool.length){history.innerHTML='<div style="font-size:11px;color:rgba(255,255,255,0.15);text-align:center;padding:12px 0;">先点 Fetch Voice 调取</div>';return;}
-    history.innerHTML=pool.map(function(e){
-        return '<div class="hv-their-hist-item">'+
+    history.innerHTML=pool.map(function(e,i){
+        return '<div class="hv-their-hist-item" data-idx="'+i+'">'+
             '<span class="hv-their-hist-text">— '+esc(e.text)+'</span>'+
             '<span class="hv-their-hist-time">'+esc(e.time)+'</span>'+
+            '<span class="hv-their-hist-del" data-idx="'+i+'" style="display:none;">✕</span>'+
         '</div>';
     }).join('');
+    history.querySelectorAll('.hv-their-hist-item').forEach(function(item){
+        item.addEventListener('click',function(ev){
+            if(ev.target.classList.contains('hv-their-hist-del'))return;
+            var del=item.querySelector('.hv-their-hist-del');
+            if(del)del.style.display=del.style.display==='none'?'inline':'none';
+        });
+    });
+    history.querySelectorAll('.hv-their-hist-del').forEach(function(btn){
+        btn.addEventListener('click',function(ev){
+            ev.stopPropagation();
+            var idx=parseInt(btn.dataset.idx);
+            var arr=[];try{arr=JSON.parse(localStorage.getItem('ca-hv-their-'+entId)||'[]');}catch(e){arr=[];}
+            arr.splice(idx,1);
+            localStorage.setItem('ca-hv-their-'+entId,JSON.stringify(arr));
+            _theirVoiceCache=arr;
+            renderTheirHistory();
+        });
+    });
 }
 
 // 心声通知卡片样式（3种轮换）

@@ -337,15 +337,20 @@ function executeDelete(){
     });
 
     // 从数据中删除（和 cut 一样的流程：改内存→写DB→渲染→通知05）
+    var entId=window._cdaCurrentEntId;
     setTimeout(function(){
         deleteFromData(selected);
 
-        var entId=window._cdaCurrentEntId;
-        // 写 DB（和 cut 一样）
+        // 立即同步写 DB（确保退出重进也能读到最新数据）
         if(entId&&window._caConversations&&window._caConversations[entId]){
             if(typeof ChatDB!=='undefined'&&ChatDB.saveConversation){
                 ChatDB.saveConversation(entId,window._caConversations[entId]);
             }
+        }
+
+        // 标记内存已修改，防止 renderMessages 从 DB 覆盖
+        if(entId&&window._caConversations){
+            window._caConversations['__dirty_'+entId]=true;
         }
 
         // 闪光
@@ -366,8 +371,21 @@ function executeDelete(){
                 var ghosts=area.querySelectorAll('.ms-deleting');
                 ghosts.forEach(function(g){if(g.parentNode)g.parentNode.removeChild(g);});
             }
-            // 和 cut 一样：直接渲染 + 通知
-            if(typeof renderMessagesNoAnim==='function')renderMessagesNoAnim();
+            // 直接用内存数据重新渲染（不走 DB 加载）
+            if(entId&&window._caConversations&&window._caConversations[entId]){
+                var area3=document.getElementById('cdaMsgArea');
+                if(area3){
+                    var entities=window._caEntities||[];
+                    var ent=entities.find(function(e){return e.id===entId;});
+                    if(ent&&typeof window._cdaDoRenderMessages==='function'){
+                        window._cdaDoRenderMessages(area3,ent);
+                    }else if(typeof renderMessagesNoAnim==='function'){
+                        renderMessagesNoAnim();
+                    }
+                }
+            }else if(typeof renderMessagesNoAnim==='function'){
+                renderMessagesNoAnim();
+            }
             var area2=document.getElementById('cdaMsgArea');
             if(area2)area2.scrollTop=area2.scrollHeight;
             if(entId){

@@ -26,10 +26,14 @@ function loadApiConfig(){
 }
 function saveApiConfig(cfg){localStorage.setItem('ca-api-config',JSON.stringify(cfg));}
 
-function loadTimeConfig(){
-    try{return JSON.parse(localStorage.getItem('ca-time-config')||'{"on":false}');}catch(e){return{on:false};}
+function loadTimeConfig(entId){
+    var key=entId?'ca-time-config-'+entId:'ca-time-config';
+    try{return JSON.parse(localStorage.getItem(key)||'{"on":false}');}catch(e){return{on:false};}
 }
-function saveTimeConfig(cfg){localStorage.setItem('ca-time-config',JSON.stringify(cfg));}
+function saveTimeConfig(cfg,entId){
+    var key=entId?'ca-time-config-'+entId:'ca-time-config';
+    localStorage.setItem(key,JSON.stringify(cfg));
+}
 
 function loadWatermarkConfig(){
     try{return JSON.parse(localStorage.getItem('ca-watermark-config')||'{"text":"Story"}');}catch(e){return{text:"Story"};}
@@ -45,7 +49,7 @@ function renderSettings(entId){
     var apiConfig=loadApiConfig();
     var node=apiConfig.node||'primary';
     var cfg=apiConfig[node]||{};
-    var timeConfig=loadTimeConfig();
+    var timeConfig=loadTimeConfig(entId);
     var wmConfig=loadWatermarkConfig();
     var memRounds=parseInt(localStorage.getItem('ca-mem-rounds-14-'+entId)||localStorage.getItem('ca-mem-rounds-'+entId)||'30',10);
 
@@ -194,7 +198,20 @@ function renderSettings(entId){
                 '<div style="font-size:8px;color:rgba(26,26,31,0.25);margin-bottom:8px;line-height:1.5;">输入字体名称，或粘贴图床字体 URL（.woff2/.ttf/.otf）</div>'+
                 '<input type="text" id="csFontName" placeholder="例: Noto Serif SC, LXGW WenKai..." value="'+(function(){try{return JSON.parse(localStorage.getItem('ca-bubble-font')||'{}').name||'';}catch(e){return '';}})()+'" style="width:100%;border:none;border-bottom:0.5px solid rgba(26,26,31,0.1);background:transparent;font-size:12px;padding:6px 0;outline:none;color:#1a1a1f;margin-bottom:12px;">'+
                 '<input type="text" id="csFontUrl" placeholder="字体文件 URL（选填）" value="'+(function(){try{return JSON.parse(localStorage.getItem('ca-bubble-font')||'{}').url||'';}catch(e){return '';}})()+'" style="width:100%;border:none;border-bottom:0.5px solid rgba(26,26,31,0.1);background:transparent;font-size:12px;padding:6px 0;outline:none;color:#1a1a1f;margin-bottom:12px;">'+
+                '<div style="margin-bottom:12px;"><div id="csFontFileBtn" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border-radius:12px;border:1px dashed rgba(26,26,31,0.15);cursor:pointer;transition:all 0.2s;"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:rgba(26,26,31,0.4);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><span style="font-size:11px;color:rgba(26,26,31,0.5);font-weight:600;">上传本地字体文件</span></div><input type="file" id="csFontFileInput" accept=".ttf,.otf,.woff,.woff2" style="display:none;"><div id="csFontFileStatus" style="font-size:9px;color:rgba(26,26,31,0.3);margin-top:6px;display:none;"></div></div>'+
                 '<div class="cs-btns"><div class="cs-btn ghost" id="csFontReset" style="background:transparent;border:1px solid rgba(26,26,31,0.15);color:#1a1a1f;">Reset</div><div class="cs-btn dark" id="csFontApply" style="background:#1a1a1f;color:#fff;">Apply</div></div>'+
+                '</div></div>'+
+            '</div>'+
+            '<div class="cs-acc"><div class="cs-acc-hd"><div class="cs-acc-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div class="cs-acc-info"><div class="cs-acc-name">标签 / 时间戳</div><div class="cs-acc-desc">Bubble labels & timestamps</div></div><svg class="cs-acc-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>'+
+                '<div class="cs-acc-body"><div class="cs-acc-inner" id="csBubbleLabelsInner">'+
+                '<div style="font-size:9px;color:rgba(26,26,31,0.25);margin-bottom:12px;line-height:1.5;">在气泡旁显示自定义文字或时间戳。支持多个标签，互不干扰。样式可通过 .cda-bubble-lbl 类名用CSS覆盖。</div>'+
+                '<div id="csLabelPreview" style="background:rgba(26,26,31,0.02);border:0.5px solid rgba(26,26,31,0.06);border-radius:14px;padding:14px 12px;margin-bottom:14px;display:flex;flex-direction:column;gap:6px;">'+
+                    '<div style="font-size:7px;color:rgba(26,26,31,0.2);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Preview</div>'+
+                    '<div style="display:flex;align-items:flex-end;gap:6px;"><div style="width:24px;height:24px;border-radius:50%;background:#1a1a1f;display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff;flex-shrink:0;">K</div><div class="cs-lbl-prev-wrap-recv" style="position:relative;"><div style="padding:7px 12px;font-size:11px;background:#fff;color:#1a1a1f;border-radius:12px 12px 12px 3px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">想你了</div></div></div>'+
+                    '<div style="display:flex;align-items:flex-end;gap:6px;flex-direction:row-reverse;"><div class="cs-lbl-prev-wrap-sent" style="position:relative;"><div style="padding:7px 12px;font-size:11px;background:#1a1a1f;color:#fff;border-radius:12px 12px 3px 12px;">我也是</div></div></div>'+
+                '</div>'+
+                '<div id="csBubbleLabelList"></div>'+
+                '<div id="csBubbleLabelAdd" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:12px;border-radius:12px;border:1px dashed rgba(26,26,31,0.15);cursor:pointer;font-size:10px;font-weight:700;color:rgba(26,26,31,0.4);margin-top:8px;">+ 添加标签</div>'+
                 '</div></div>'+
             '</div>'+
             '<div class="cs-acc"><div class="cs-acc-hd"><div class="cs-acc-icon"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div><div class="cs-acc-info"><div class="cs-acc-name">自定义样式</div><div class="cs-acc-desc">Inject CSS overrides</div></div><svg class="cs-acc-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>'+
@@ -216,23 +233,23 @@ function renderSettings(entId){
                 '</div></div>'+
                 '</div></div>'+
             '</div>'+
-            '<div class="cs-acc"><div class="cs-acc-hd"><div class="cs-acc-icon"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div><div class="cs-acc-info"><div class="cs-acc-name">旁白模式</div><div class="cs-acc-desc">AI outputs narration between lines</div></div><div class="cs-toggle'+(JSON.parse(localStorage.getItem('ca-narration-config')||'{"on":false}').on?' on':'')+'" id="csNarrationToggle"></div><svg class="cs-acc-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>'+
+            '<div class="cs-acc"><div class="cs-acc-hd"><div class="cs-acc-icon"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div><div class="cs-acc-info"><div class="cs-acc-name">旁白模式</div><div class="cs-acc-desc">AI outputs narration between lines</div></div><div class="cs-toggle'+(JSON.parse(localStorage.getItem('ca-narration-config-'+entId)||localStorage.getItem('ca-narration-config')||'{"on":false}').on?' on':'')+'" id="csNarrationToggle"></div><svg class="cs-acc-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>'+
                 '<div class="cs-acc-body"><div class="cs-acc-inner">'+
                 '<div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:10px;">旁白样式 / Narration Style</div>'+
                 '<div class="cs-narr-grid" id="csNarrGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">'+
-                    (function(){var ns;try{ns=JSON.parse(localStorage.getItem('ca-narration-config')||'{}');}catch(e){ns={};}var cur=ns.style||'a';var items=[{id:'a',name:'居中'},{id:'b',name:'竖线'},{id:'c',name:'卡片'},{id:'d',name:'极简'},{id:'e',name:'右签'},{id:'f',name:'破折'},{id:'g',name:'引用'},{id:'h',name:'等宽'},{id:'i',name:'音符'},{id:'j',name:'淡线'},{id:'k',name:'散文'},{id:'l',name:'圆点'},{id:'m',name:'暗色'},{id:'n',name:'手写'}];var h='';items.forEach(function(it){h+='<div class="cs-narr-item'+(cur===it.id?' active':'')+'" data-narr-style="'+it.id+'" style="padding:10px 6px;border-radius:10px;text-align:center;cursor:pointer;border:0.5px solid rgba(255,255,255,'+(cur===it.id?'0.3':'0.08')+');background:rgba(255,255,255,'+(cur===it.id?'0.1':'0.03')+');transition:all 0.2s;"><div style="font-size:10px;font-weight:700;color:'+(cur===it.id?'#fff':'rgba(255,255,255,0.5)')+';letter-spacing:0.3px;">'+it.name+'</div><div style="font-size:7px;color:rgba(255,255,255,0.25);margin-top:2px;text-transform:uppercase;">'+it.id.toUpperCase()+'</div></div>';});return h;})()+
+                    (function(){var ns;try{ns=JSON.parse(localStorage.getItem('ca-narration-config-'+entId)||localStorage.getItem('ca-narration-config')||'{}');}catch(e){ns={};}var cur=ns.style||'a';var items=[{id:'a',name:'居中'},{id:'b',name:'竖线'},{id:'c',name:'卡片'},{id:'d',name:'极简'},{id:'e',name:'右签'},{id:'f',name:'破折'},{id:'g',name:'引用'},{id:'h',name:'等宽'},{id:'i',name:'音符'},{id:'j',name:'淡线'},{id:'k',name:'散文'},{id:'l',name:'圆点'},{id:'m',name:'暗色'},{id:'n',name:'手写'}];var h='';items.forEach(function(it){h+='<div class="cs-narr-item'+(cur===it.id?' active':'')+'" data-narr-style="'+it.id+'" style="padding:10px 6px;border-radius:10px;text-align:center;cursor:pointer;border:0.5px solid rgba(255,255,255,'+(cur===it.id?'0.3':'0.08')+');background:rgba(255,255,255,'+(cur===it.id?'0.1':'0.03')+');transition:all 0.2s;"><div style="font-size:10px;font-weight:700;color:'+(cur===it.id?'#fff':'rgba(255,255,255,0.5)')+';letter-spacing:0.3px;">'+it.name+'</div><div style="font-size:7px;color:rgba(255,255,255,0.25);margin-top:2px;text-transform:uppercase;">'+it.id.toUpperCase()+'</div></div>';});return h;})()+
                 '</div>'+
                 '<div style="margin-top:16px;border-top:0.5px solid rgba(255,255,255,0.06);padding-top:14px;">'+
                     '<div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:10px;">旁白字数范围 / Length Range</div>'+
                     '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">'+
                         '<span style="font-size:8px;color:rgba(255,255,255,0.25);flex-shrink:0;">短</span>'+
-                        '<input type="range" class="cs-slider" id="csNarrMinLen" min="2" max="50" step="1" value="'+(function(){try{return JSON.parse(localStorage.getItem('ca-narration-config')||'{}').minLen||3;}catch(e){return 3;}})()+'" style="flex:1;">'+
-                        '<span id="csNarrMinVal" style="font-family:monospace;font-size:11px;color:#fff;min-width:20px;text-align:center;">'+(function(){try{return JSON.parse(localStorage.getItem('ca-narration-config')||'{}').minLen||3;}catch(e){return 3;}})()+' 字</span>'+
+                        '<input type="range" class="cs-slider" id="csNarrMinLen" min="2" max="50" step="1" value="'+(function(){try{return JSON.parse(localStorage.getItem('ca-narration-config-'+entId)||localStorage.getItem('ca-narration-config')||'{}').minLen||3;}catch(e){return 3;}})()+'" style="flex:1;">'+
+                        '<span id="csNarrMinVal" style="font-family:monospace;font-size:11px;color:#fff;min-width:20px;text-align:center;">'+(function(){try{return JSON.parse(localStorage.getItem('ca-narration-config-'+entId)||localStorage.getItem('ca-narration-config')||'{}').minLen||3;}catch(e){return 3;}})()+' 字</span>'+
                     '</div>'+
                     '<div style="display:flex;align-items:center;gap:10px;">'+
                         '<span style="font-size:8px;color:rgba(255,255,255,0.25);flex-shrink:0;">长</span>'+
-                        '<input type="range" class="cs-slider" id="csNarrMaxLen" min="10" max="200" step="5" value="'+(function(){try{return JSON.parse(localStorage.getItem('ca-narration-config')||'{}').maxLen||80;}catch(e){return 80;}})()+'" style="flex:1;">'+
-                        '<span id="csNarrMaxVal" style="font-family:monospace;font-size:11px;color:#fff;min-width:20px;text-align:center;">'+(function(){try{return JSON.parse(localStorage.getItem('ca-narration-config')||'{}').maxLen||80;}catch(e){return 80;}})()+' 字</span>'+
+                        '<input type="range" class="cs-slider" id="csNarrMaxLen" min="10" max="200" step="5" value="'+(function(){try{return JSON.parse(localStorage.getItem('ca-narration-config-'+entId)||localStorage.getItem('ca-narration-config')||'{}').maxLen||80;}catch(e){return 80;}})()+'" style="flex:1;">'+
+                        '<span id="csNarrMaxVal" style="font-family:monospace;font-size:11px;color:#fff;min-width:20px;text-align:center;">'+(function(){try{return JSON.parse(localStorage.getItem('ca-narration-config-'+entId)||localStorage.getItem('ca-narration-config')||'{}').maxLen||80;}catch(e){return 80;}})()+' 字</span>'+
                     '</div>'+
                     '<div style="margin-top:8px;font-size:8px;color:rgba(255,255,255,0.2);line-height:1.5;">AI 每段旁白大约在此范围内波动，不是硬限制</div>'+
                 '</div>'+
@@ -240,9 +257,9 @@ function renderSettings(entId){
                     '<div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:10px;">旁白字号 / Narration Font Size</div>'+
                     '<div style="display:flex;align-items:center;gap:10px;">'+
                         '<span style="font-size:8px;color:rgba(255,255,255,0.25);flex-shrink:0;">小</span>'+
-                        '<input type="range" class="cs-slider" id="csNarrFontSize" min="10" max="16" step="1" value="'+(function(){try{return JSON.parse(localStorage.getItem('ca-narration-config')||'{}').fontSize||12;}catch(e){return 12;}})()+'" style="flex:1;">'+
+                        '<input type="range" class="cs-slider" id="csNarrFontSize" min="10" max="16" step="1" value="'+(function(){try{return JSON.parse(localStorage.getItem('ca-narration-config-'+entId)||localStorage.getItem('ca-narration-config')||'{}').fontSize||12;}catch(e){return 12;}})()+'" style="flex:1;">'+
                         '<span style="font-size:8px;color:rgba(255,255,255,0.25);flex-shrink:0;">大</span>'+
-                        '<span id="csNarrFontSizeVal" style="font-family:monospace;font-size:11px;color:#fff;min-width:28px;text-align:center;">'+(function(){try{return JSON.parse(localStorage.getItem('ca-narration-config')||'{}').fontSize||12;}catch(e){return 12;}})()+' px</span>'+
+                        '<span id="csNarrFontSizeVal" style="font-family:monospace;font-size:11px;color:#fff;min-width:28px;text-align:center;">'+(function(){try{return JSON.parse(localStorage.getItem('ca-narration-config-'+entId)||localStorage.getItem('ca-narration-config')||'{}').fontSize||12;}catch(e){return 12;}})()+' px</span>'+
                     '</div>'+
                 '</div>'+
                 '</div></div>'+
@@ -442,12 +459,12 @@ function bindSettingsEvents(entId){
             var img=new Image();
             img.onload=function(){
                 var canvas=document.createElement('canvas');
-                var size=200;canvas.width=size;canvas.height=size;
+                var size=Math.min(512,Math.min(img.width,img.height));canvas.width=size;canvas.height=size;
                 var ctx=canvas.getContext('2d');
                 var min=Math.min(img.width,img.height);
                 var sx=(img.width-min)/2,sy=(img.height-min)/2;
                 ctx.drawImage(img,sx,sy,min,min,0,0,size,size);
-                var dataUrl=canvas.toDataURL('image/jpeg',0.7);
+                var dataUrl=canvas.toDataURL('image/jpeg',0.85);
                 var entities=window._caEntities||[];
                 var ent=entities.find(function(e){return e.id===entId;});
                 if(!ent)return;
@@ -643,19 +660,56 @@ function bindSettingsEvents(entId){
         transGrid.querySelectorAll('.cs-trans-item').forEach(function(item){
             item.addEventListener('click',function(e){
                 e.stopPropagation();
+                // 点击前，读取当前激活项的 style 作为 prevStyle（最可靠）
+                var prevActiveItem=transGrid.querySelector('.cs-trans-item.active');
+                var prevStyle=prevActiveItem?prevActiveItem.dataset.style:'off';
+                var newStyle=item.dataset.style;
                 transGrid.querySelectorAll('.cs-trans-item').forEach(function(i){i.classList.remove('active');});
                 item.classList.add('active');
                 var tc;try{tc=JSON.parse(localStorage.getItem('ca-trans-config-14')||'{}');}catch(ex){tc={};}
-                tc.style=item.dataset.style;
+                tc.style=newStyle;
                 localStorage.setItem('ca-trans-config-14',JSON.stringify(tc));
-                renderTransPreview(item.dataset.style);
+                renderTransPreview(newStyle);
+                // 发翻译开关通知到聊天室（每次切换都提醒AI格式要求）
+                (function(){
+                    var _entId=settingsEntId||window._cdaCurrentEntId;
+                    if(!_entId)return;
+                    if(typeof window.cdaAddTransNotice==='function'){
+                        if(newStyle!=='off'){
+                            var targetLang=(document.getElementById('csTransTargetLang')&&document.getElementById('csTransTargetLang').value.trim())||tc.transLang||'Chinese';
+                            window.cdaAddTransNotice('on',targetLang);
+                        }else{
+                            window.cdaAddTransNotice('off');
+                        }
+                    }else{
+                        // fallback：直接写入对话记录
+                        var _token='[TRANS_NOTICE::'+(newStyle!=='off'?'on':'off')+']';
+                        var _lang=(newStyle!=='off')?((document.getElementById('csTransTargetLang')&&document.getElementById('csTransTargetLang').value.trim())||tc.transLang||'Chinese'):'';
+                        if(_lang)_token='[TRANS_NOTICE::on::'+_lang+']';
+                        if(!window._caConversations)window._caConversations={};
+                        if(!window._caConversations[_entId])window._caConversations[_entId]=[];
+                        var _aiText=newStyle!=='off'
+                            ?('[⚠ BILINGUAL MODE ACTIVATED — MANDATORY FORMAT REMINDER]\nFrom this point forward, you MUST use the bilingual format for EVERY reply.\nFormat: Write your reply naturally first, then add "|||TRANS|||" followed by the '+(_lang||'Chinese')+' translation.\nExample:想你了|||TRANS|||I miss you\nIf your reply has multiple lines (split by newline), EACH line must contain "|||TRANS|||".\nDO NOT skip the translation. DO NOT forget the delimiter. This is non-negotiable.')
+                            :('[⚠ BILINGUAL MODE DEACTIVATED]\nStop using the "|||TRANS|||" delimiter. Reply in a single language only from now on.');
+                        var _d=new Date();
+                        var _t=_d.getFullYear()+'-'+String(_d.getMonth()+1).padStart(2,'0')+'-'+String(_d.getDate()).padStart(2,'0')+' '+String(_d.getHours()).padStart(2,'0')+':'+String(_d.getMinutes()).padStart(2,'0');
+                        window._caConversations[_entId].push({role:'info',text:_token,_aiText:_aiText,ai_visible:true,_sticky:true,time:_t});
+                        if(typeof ChatDB!=='undefined'&&ChatDB.saveConversation){
+                            ChatDB.saveConversation(_entId,window._caConversations[_entId]);
+                        }
+                    }
+                })();
             });
         });
 
-        // 初始渲染当前选中的预览
+        // 初始渲染当前选中的预览（用ca-trans-config-14，与实际配置一致）
         var initTransConfig;
-        try{initTransConfig=JSON.parse(localStorage.getItem('ca-trans-config')||'{"style":"off"}');}catch(ex){initTransConfig={style:'off'};}
-        renderTransPreview(initTransConfig.style);
+        try{initTransConfig=JSON.parse(localStorage.getItem('ca-trans-config-14')||localStorage.getItem('ca-trans-config')||'{"style":"off"}');}catch(ex){initTransConfig={style:'off'};}
+        // 同步active 状态到 DOM
+        var _initStyle=initTransConfig.style||'off';
+        transGrid.querySelectorAll('.cs-trans-item').forEach(function(i){
+            i.classList.toggle('active',i.dataset.style===_initStyle);
+        });renderTransPreview(_initStyle);
     }
     var transMyLang=document.getElementById('csTransMyLang');
     var transTargetLang=document.getElementById('csTransTargetLang');
@@ -820,11 +874,10 @@ function bindSettingsEvents(entId){
     if(timeToggle){
         timeToggle.addEventListener('click',function(e){
             e.stopPropagation();
-            // toggle 的 on class 已经在通用 toggle handler 里切换了，这里直接读
             setTimeout(function(){
-                var tc=loadTimeConfig();
+                var tc=loadTimeConfig(entId);
                 tc.on=timeToggle.classList.contains('on');
-                saveTimeConfig(tc);
+                saveTimeConfig(tc,entId);
             },50);
         });
     }
@@ -834,7 +887,7 @@ function bindSettingsEvents(entId){
         timeCustomToggle.addEventListener('click',function(e){
             e.stopPropagation();
             setTimeout(function(){
-                var tc=loadTimeConfig();
+                var tc=loadTimeConfig(entId);
                 tc.custom=timeCustomToggle.classList.contains('on');
                 if(tc.custom){
                     tc.customMonth=parseInt(document.getElementById('csTcMonth').value)||new Date().getMonth()+1;
@@ -842,7 +895,7 @@ function bindSettingsEvents(entId){
                     tc.customHour=parseInt(document.getElementById('csTcHour').value)||0;
                     tc.customMin=parseInt(document.getElementById('csTcMin').value)||0;
                 }
-                saveTimeConfig(tc);
+                saveTimeConfig(tc,entId);
                 var inputs=document.getElementById('csTimeCustomInputs');
                 if(inputs)inputs.style.display=tc.custom?'block':'none';
             },50);
@@ -853,12 +906,12 @@ function bindSettingsEvents(entId){
         var inp=document.getElementById(id);
         if(inp){
             inp.addEventListener('input',function(){
-                var tc=loadTimeConfig();
+                var tc=loadTimeConfig(entId);
                 tc.customMonth=parseInt(document.getElementById('csTcMonth').value)||1;
                 tc.customDay=parseInt(document.getElementById('csTcDay').value)||1;
                 tc.customHour=parseInt(document.getElementById('csTcHour').value)||0;
                 tc.customMin=parseInt(document.getElementById('csTcMin').value)||0;
-                saveTimeConfig(tc);
+                saveTimeConfig(tc,entId);
             });
         }
     });
@@ -867,7 +920,7 @@ function bindSettingsEvents(entId){
     var clockEl=document.getElementById('csTimeClock');
     var clockTimer=setInterval(function(){
         if(!clockEl||!document.getElementById('cdaSettings'))return clearInterval(clockTimer);
-        var tc=loadTimeConfig();
+        var tc=loadTimeConfig(entId);
         var now=new Date();
         var mo=now.getMonth()+1,d=now.getDate(),h=now.getHours(),m=now.getMinutes(),s=now.getSeconds();
         if(tc.custom){
@@ -882,9 +935,9 @@ function bindSettingsEvents(entId){
         narrationToggle.addEventListener('click',function(e){
             e.stopPropagation();
             setTimeout(function(){
-                var nc;try{nc=JSON.parse(localStorage.getItem('ca-narration-config')||'{}');}catch(ex){nc={};}
+                var nc;try{nc=JSON.parse(localStorage.getItem('ca-narration-config-'+entId)||localStorage.getItem('ca-narration-config')||'{}');}catch(ex){nc={};}
                 nc.on=narrationToggle.classList.contains('on');
-                localStorage.setItem('ca-narration-config',JSON.stringify(nc));
+                localStorage.setItem('ca-narration-config-'+entId,JSON.stringify(nc));
                 // 写入一条 info 通知到对话记录
                 if(settingsEntId){
                     if(!window._caConversations)window._caConversations={};
@@ -917,9 +970,9 @@ function bindSettingsEvents(entId){
                 item.style.borderColor='rgba(255,255,255,0.3)';
                 item.style.background='rgba(255,255,255,0.1)';
                 item.querySelector('div').style.color='#fff';
-                var nc;try{nc=JSON.parse(localStorage.getItem('ca-narration-config')||'{}');}catch(ex){nc={};}
+                var nc;try{nc=JSON.parse(localStorage.getItem('ca-narration-config-'+entId)||localStorage.getItem('ca-narration-config')||'{}');}catch(ex){nc={};}
                 nc.style=item.dataset.narrStyle;
-                localStorage.setItem('ca-narration-config',JSON.stringify(nc));
+                localStorage.setItem('ca-narration-config-'+entId,JSON.stringify(nc));
                 window.dispatchEvent(new CustomEvent('cda-settings-changed'));
             });
         });
@@ -934,18 +987,18 @@ function bindSettingsEvents(entId){
         narrMinSlider.addEventListener('input',function(){
             var v=parseInt(narrMinSlider.value,10);
             if(narrMinVal)narrMinVal.textContent=v+' 字';
-            var nc;try{nc=JSON.parse(localStorage.getItem('ca-narration-config')||'{}');}catch(ex){nc={};}
+            var nc;try{nc=JSON.parse(localStorage.getItem('ca-narration-config-'+entId)||localStorage.getItem('ca-narration-config')||'{}');}catch(ex){nc={};}
             nc.minLen=v;
-            localStorage.setItem('ca-narration-config',JSON.stringify(nc));
+            localStorage.setItem('ca-narration-config-'+entId,JSON.stringify(nc));
         });
     }
     if(narrMaxSlider){
         narrMaxSlider.addEventListener('input',function(){
             var v=parseInt(narrMaxSlider.value,10);
             if(narrMaxVal)narrMaxVal.textContent=v+' 字';
-            var nc;try{nc=JSON.parse(localStorage.getItem('ca-narration-config')||'{}');}catch(ex){nc={};}
+            var nc;try{nc=JSON.parse(localStorage.getItem('ca-narration-config-'+entId)||localStorage.getItem('ca-narration-config')||'{}');}catch(ex){nc={};}
             nc.maxLen=v;
-            localStorage.setItem('ca-narration-config',JSON.stringify(nc));
+            localStorage.setItem('ca-narration-config-'+entId,JSON.stringify(nc));
         });
     }
 
@@ -956,9 +1009,9 @@ function bindSettingsEvents(entId){
         narrFontSlider.addEventListener('input',function(){
             var v=parseInt(narrFontSlider.value,10);
             if(narrFontVal)narrFontVal.textContent=v+' px';
-            var nc;try{nc=JSON.parse(localStorage.getItem('ca-narration-config')||'{}');}catch(ex){nc={};}
+            var nc;try{nc=JSON.parse(localStorage.getItem('ca-narration-config-'+entId)||localStorage.getItem('ca-narration-config')||'{}');}catch(ex){nc={};}
             nc.fontSize=v;
-            localStorage.setItem('ca-narration-config',JSON.stringify(nc));
+            localStorage.setItem('ca-narration-config-'+entId,JSON.stringify(nc));
             applyNarrFontSize(v);
         });
     }
@@ -973,7 +1026,7 @@ function bindSettingsEvents(entId){
         document.head.appendChild(s);
     }
     // 初始应用
-    (function(){var nc;try{nc=JSON.parse(localStorage.getItem('ca-narration-config')||'{}');}catch(e){nc={};}if(nc.fontSize)applyNarrFontSize(nc.fontSize);})();
+    (function(){var nc;try{nc=JSON.parse(localStorage.getItem('ca-narration-config-'+entId)||localStorage.getItem('ca-narration-config')||'{}');}catch(e){nc={};}if(nc.fontSize)applyNarrFontSize(nc.fontSize);})();
 
     // 见面邀请
     var inviteToggle=document.getElementById('csInviteToggle');
@@ -1017,17 +1070,141 @@ function bindSettingsEvents(entId){
     }
     var fontApply=document.getElementById('csFontApply');
     var fontReset=document.getElementById('csFontReset');
+    // 本地字体文件上传（存IndexedDB，不受localStorage 5MB限制）
+    var fontFileBtn=document.getElementById('csFontFileBtn');
+    var fontFileInput=document.getElementById('csFontFileInput');
+    var fontFileStatus=document.getElementById('csFontFileStatus');
+    if(fontFileBtn&&fontFileInput){
+        fontFileBtn.addEventListener('click',function(){fontFileInput.click();});
+        fontFileInput.addEventListener('change',function(ev){
+            var file=ev.target.files[0];
+            if(!file)return;
+            var fileSize=(file.size/1024/1024).toFixed(2);
+            if(file.size>20*1024*1024){
+                if(fontFileStatus){fontFileStatus.style.display='block';fontFileStatus.style.color='#c0392b';fontFileStatus.textContent='文件太大（'+fileSize+'MB），建议小于 20MB';}
+                return;
+            }
+            if(fontFileStatus){fontFileStatus.style.display='block';fontFileStatus.style.color='rgba(26,26,31,0.4)';fontFileStatus.textContent='读取中... ('+fileSize+'MB)';}
+            fontFileBtn.style.borderColor='rgba(26,26,31,0.3)';
+            fontFileBtn.querySelector('span').textContent='加载中...';
+            var reader=new FileReader();
+            reader.onload=function(e){
+                var dataUrl=e.target.result;
+                var autoName='CustomFont_'+file.name.replace(/\.[^.]+$/,'').replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g,'_');
+                if(window.FontFace){
+                    var testF=new FontFace(autoName,'url('+dataUrl+')');
+                    testF.load().then(function(loaded){
+                        document.fonts.add(loaded);
+                        // 存base64到IndexedDB（avatars表，key=font_custom）
+                        if(typeof ChatDB!=='undefined'&&ChatDB.open){
+                            ChatDB.open(function(d){
+                                if(!d){_fontSaveFallback(autoName,dataUrl,file,fileSize);return;}
+                                var tx=d.transaction('avatars','readwrite');
+                                tx.objectStore('avatars').put({id:'font_custom',data:dataUrl});
+                                tx.oncomplete=function(){
+                                    // localStorage只存名字和标记，不存base64
+                                    var size=parseInt(document.getElementById('csFontSize').value,10)||13;
+                                    localStorage.setItem('ca-bubble-font',JSON.stringify({size:size,name:autoName,url:'',_hasIDB:true}));
+                                    document.getElementById('csFontName').value=autoName;
+                                    document.getElementById('csFontUrl').value='(本地文件) '+file.name;
+                                    if(fontFileStatus){fontFileStatus.style.color='#27ae60';fontFileStatus.textContent='✓ 字体已存入数据库：'+autoName+' ('+fileSize+'MB)';}
+                                    fontFileBtn.style.borderColor='#27ae60';
+                                    fontFileBtn.querySelector('span').textContent='✓ '+file.name;
+                                    applyBubbleFont();
+                                    window.dispatchEvent(new CustomEvent('cda-settings-changed'));
+                                };
+                                tx.onerror=function(){_fontSaveFallback(autoName,dataUrl,file,fileSize);};
+                            });
+                        }else{
+                            _fontSaveFallback(autoName,dataUrl,file,fileSize);
+                        }
+                    }).catch(function(err){
+                        if(fontFileStatus){fontFileStatus.style.display='block';fontFileStatus.style.color='#c0392b';fontFileStatus.textContent='字体文件无效：'+err.message;}
+                        fontFileBtn.style.borderColor='rgba(26,26,31,0.15)';
+                        fontFileBtn.querySelector('span').textContent='上传本地字体文件';
+                    });
+                }else{
+                    _fontSaveFallback(autoName,dataUrl,file,fileSize);
+                }
+            };
+            reader.onerror=function(){
+                if(fontFileStatus){fontFileStatus.style.display='block';fontFileStatus.style.color='#c0392b';fontFileStatus.textContent='读取文件失败';}
+                fontFileBtn.style.borderColor='rgba(26,26,31,0.15)';
+                fontFileBtn.querySelector('span').textContent='上传本地字体文件';
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+    function _fontSaveFallback(autoName,dataUrl,file,fileSize){
+        // IndexedDB不可用时尝试localStorage（小字体可能放得下）
+        try{
+            var size=parseInt(document.getElementById('csFontSize').value,10)||13;
+            localStorage.setItem('ca-bubble-font',JSON.stringify({size:size,name:autoName,url:'',_dataUrl:dataUrl}));
+            document.getElementById('csFontName').value=autoName;
+            if(document.getElementById('csFontUrl'))document.getElementById('csFontUrl').value='(本地文件) '+file.name;
+            var ffs=document.getElementById('csFontFileStatus');
+            if(ffs){ffs.style.color='#27ae60';ffs.textContent='✓ 字体加载成功：'+autoName+' ('+fileSize+'MB)';}
+            var ffb=document.getElementById('csFontFileBtn');
+            if(ffb){ffb.style.borderColor='#27ae60';ffb.querySelector('span').textContent='✓ '+file.name;}
+            applyBubbleFont();
+            window.dispatchEvent(new CustomEvent('cda-settings-changed'));
+        }catch(e){
+            var ffs2=document.getElementById('csFontFileStatus');
+            if(ffs2){ffs2.style.display='block';ffs2.style.color='#c0392b';ffs2.textContent='存储失败，字体文件太大';}
+        }
+    }
+
     if(fontApply){
         fontApply.addEventListener('click',function(){
             var size=parseInt(document.getElementById('csFontSize').value,10)||13;
             var name=(document.getElementById('csFontName').value||'').trim();
             var url=(document.getElementById('csFontUrl').value||'').trim();
-            localStorage.setItem('ca-bubble-font',JSON.stringify({size:size,name:name,url:url}));
-            applyBubbleFont();
-            fontApply.textContent='✓ Applied';
-            setTimeout(function(){fontApply.textContent='Apply';},1000);
+            // 如果填了URL但没填名字，自动生成一个名字
+            if(url&&!name){
+                name='CustomFont_'+Date.now();
+                document.getElementById('csFontName').value=name;
+            }
+            fontApply.textContent='加载中...';
+            fontApply.style.opacity='0.5';
+            // 如果有URL，先尝试直接加载，失败则走代理转base64
+            if(url){
+                _loadFontWithFallback(name,url,function(success,finalName){
+                    if(success){
+                        // 用最终确定的name保存
+                        var saveName=finalName||name;
+                        document.getElementById('csFontName').value=saveName;
+                        localStorage.setItem('ca-bubble-font',JSON.stringify({size:size,name:saveName,url:url}));
+                    }else{
+                        localStorage.setItem('ca-bubble-font',JSON.stringify({size:size,name:name,url:url}));
+                    }
+                    applyBubbleFont();
+                    window.dispatchEvent(new CustomEvent('cda-settings-changed'));
+                    fontApply.style.opacity='1';
+                    fontApply.textContent='✓ Applied';
+                    setTimeout(function(){fontApply.textContent='Apply';},1000);
+                });
+            }else{
+                localStorage.setItem('ca-bubble-font',JSON.stringify({size:size,name:name,url:url}));
+                applyBubbleFont();
+                window.dispatchEvent(new CustomEvent('cda-settings-changed'));
+                fontApply.style.opacity='1';
+                fontApply.textContent='✓ Applied';
+                setTimeout(function(){fontApply.textContent='Apply';},1000);
+            }
         });
     }
+    if(fontReset){
+        fontReset.addEventListener('click',function(){
+            localStorage.removeItem('ca-bubble-font');
+            document.getElementById('csFontSize').value=13;
+            if(fontSizeVal)fontSizeVal.textContent='13 px';
+            document.getElementById('csFontName').value='';
+            document.getElementById('csFontUrl').value='';
+            applyBubbleFont();
+            window.dispatchEvent(new CustomEvent('cda-settings-changed'));
+        });
+    }
+
     if(fontReset){
         fontReset.addEventListener('click',function(){
             localStorage.removeItem('ca-bubble-font');
@@ -1039,40 +1216,189 @@ function bindSettingsEvents(entId){
         });
     }
 
+    // 字体加载：先直接试，跨域失败则用no-cors fetch转base64
+    function _loadFontWithFallback(name,url,callback){
+        if(!window.FontFace){callback(false);return;}
+        // 先直接试
+        var f1=new FontFace(name,'url('+url+')');
+        f1.load().then(function(loaded){
+            document.fonts.add(loaded);
+            console.log('[Font] ✅ 直接加载成功');
+            callback(true,name);
+        }).catch(function(){
+            console.log('[Font] 直接加载失败，尝试转base64...');
+            // 用 no-cors 拿不到数据，改用同源代理或 XMLHttpRequest
+            // 最可靠的方式：用 fetch + blob 转 data URL
+            fetch(url).then(function(r){
+                if(!r.ok)throw new Error('HTTP '+r.status);
+                return r.blob();
+            }).then(function(blob){
+                return new Promise(function(resolve){
+                    var reader=new FileReader();
+                    reader.onload=function(){resolve(reader.result);};
+                    reader.readAsDataURL(blob);
+                });
+            }).then(function(dataUrl){
+                // 存base64到IndexedDB（localStorage放不下大字体）
+                if(typeof ChatDB!=='undefined'&&ChatDB.open){
+                    ChatDB.open(function(db){
+                        if(!db){_tryFontFromDataUrl(name,dataUrl,callback);return;}
+                        var tx=db.transaction('avatars','readwrite');
+                        tx.objectStore('avatars').put({id:'font_custom',data:dataUrl});
+                        tx.oncomplete=function(){
+                            console.log('[Font] ✅ 字体已存入IndexedDB');
+                            _tryFontFromDataUrl(name,dataUrl,callback);
+                        };
+                        tx.onerror=function(){_tryFontFromDataUrl(name,dataUrl,callback);};
+                    });
+                }else{
+                    _tryFontFromDataUrl(name,dataUrl,callback);
+                }
+            }).catch(function(e){
+                console.error('[Font] ❌ 全部加载方式失败:', e.message);
+                console.log('[Font] 💡 建议：用本地文件上传代替URL');
+                callback(false);
+            });
+        });
+    }
+
+    function _tryFontFromDataUrl(name,dataUrl,callback){
+        var f2=new FontFace(name,'url('+dataUrl+')');
+        f2.load().then(function(loaded){
+            document.fonts.add(loaded);
+            console.log('[Font] ✅ base64字体加载成功');
+            // 把dataUrl存到localStorage的配置里（替换原url）
+            var cfg;try{cfg=JSON.parse(localStorage.getItem('ca-bubble-font')||'{}');}catch(e){cfg={};}
+            cfg._dataUrl=dataUrl;
+            localStorage.setItem('ca-bubble-font',JSON.stringify(cfg));
+            callback(true,name);
+        }).catch(function(e){
+            console.error('[Font] ❌ base64也加载失败:', e.message);
+            callback(false);
+        });
+    }
+
     function applyBubbleFont(){
         var styleId='cda-bubble-font-style';
         var existing=document.getElementById(styleId);
         if(existing)existing.parentNode.removeChild(existing);
-        var cfg;
-        try{cfg=JSON.parse(localStorage.getItem('ca-bubble-font')||'{}');}catch(e){cfg={};}
-        var css='';
-        // 加载自定义字体
-        if(cfg.url&&cfg.name){
-            css+='@font-face{font-family:"'+cfg.name+'";src:url("'+cfg.url+'");font-display:swap;}\n';
-        }
-        // 应用字体大小
+        var oldLink=document.getElementById('cda-bubble-font-link');
+        if(oldLink)oldLink.parentNode.removeChild(oldLink);
+        var cfg;try{cfg=JSON.parse(localStorage.getItem('ca-bubble-font')||'{}');}catch(e){cfg={};}
         var size=cfg.size||13;
-        css+='.cda-bubble{font-size:'+size+'px!important;}\n';
-        // 应用字体名称
-        if(cfg.name){
-            css+='.cda-bubble{font-family:"'+cfg.name+'",-apple-system,BlinkMacSystemFont,sans-serif!important;}\n';
+        var fontName=(cfg.name||'').trim();
+        var fontUrl=(cfg.url||'').trim();
+        var fontDataUrl=(cfg._dataUrl||'').trim();
+        var hasIDB=!!cfg._hasIDB;
+        // 先注入字号CSS（不依赖字体加载）
+        _injectFontCSS(size,fontName,'');
+        // 如果有IndexedDB存的字体，异步加载
+        if(hasIDB&&fontName&&typeof ChatDB!=='undefined'&&ChatDB.open){
+            ChatDB.open(function(d){
+                if(!d){return;}
+                var tx=d.transaction('avatars','readonly');
+                var req=tx.objectStore('avatars').get('font_custom');
+                req.onsuccess=function(){
+                    var idbData=(req.result&&req.result.data)?req.result.data:'';
+                    if(idbData){
+                        _loadFontData(fontName,idbData);
+                        _injectFontCSS(size,fontName,idbData);
+                    }
+                };
+            });
+            return;
         }
-        if(css){
-            var s=document.createElement('style');
-            s.id=styleId;
-            s.textContent=css;
-            document.head.appendChild(s);
+        // localStorage里的base64或URL
+        if(fontUrl&&!fontName){
+            fontName='CustomFont_'+Math.random().toString(36).substr(2,6);
+            cfg.name=fontName;
+            localStorage.setItem('ca-bubble-font',JSON.stringify(cfg));
         }
+        if(fontName&&(fontUrl||fontDataUrl)){
+            var actualUrl=fontDataUrl||fontUrl;
+            var isCssUrl=fontUrl.match(/\.css(\?|$)/i)||fontUrl.indexOf('fonts.googleapis.com')!==-1;
+            var isDataUrl=actualUrl.indexOf('data:')===0;
+            if(isCssUrl&&!isDataUrl){
+                var link=document.createElement('link');
+                link.id='cda-bubble-font-link';
+                link.rel='stylesheet';
+                link.href=fontUrl;
+                document.head.appendChild(link);
+            }else{
+                _loadFontData(fontName,actualUrl);
+            }
+            _injectFontCSS(size,fontName,isDataUrl?actualUrl:(isCssUrl?'':actualUrl));
+        }
+    }
+    function _loadFontData(name,dataUrl){
+        if(window.FontFace&&!document.fonts.check('16px "'+name+'"')){
+            try{
+                var ff=new FontFace(name,'url('+dataUrl+')');
+                ff.load().then(function(loaded){document.fonts.add(loaded);}).catch(function(){});
+            }catch(e){}
+        }
+    }
+    function _injectFontCSS(size,fontName,fontSrc){
+        var styleId='cda-bubble-font-style';
+        var existing=document.getElementById(styleId);
+        if(existing)existing.parentNode.removeChild(existing);
+        var css='';
+        if(fontSrc&&fontName){
+            var isDataUrl=fontSrc.indexOf('data:')===0;
+            if(isDataUrl){
+                css+='@font-face{font-family:"'+fontName+'";src:url("'+fontSrc+'");font-display:swap;font-weight:100 900;font-style:normal;}\n';
+            }else if(fontSrc){
+                var format='woff2';
+                if(fontSrc.indexOf('.ttf')!==-1)format='truetype';
+                else if(fontSrc.indexOf('.otf')!==-1)format='opentype';
+                else if(fontSrc.indexOf('.woff')!==-1&&fontSrc.indexOf('.woff2')===-1)format='woff';
+                css+='@font-face{font-family:"'+fontName+'";src:url("'+fontSrc+'") format("'+format+'");font-display:swap;font-weight:100 900;font-style:normal;}\n';
+            }
+        }
+        var bs='#chatDetailAlt .cda-bubble,#chatDetailAlt .cda-msg-row .cda-bubble,.chat-detail-alt .cda-bubble';
+        var ns='#chatDetailAlt .cda-narr-line,.chat-detail-alt .cda-narr-line';
+        var ts='#chatDetailAlt .cda-tr-s1-inner,#chatDetailAlt .cda-tr-s2-front,#chatDetailAlt .cda-tr-s2-back,#chatDetailAlt .cda-tr-s4-main,#chatDetailAlt .cda-tr-s4-peel,#chatDetailAlt .cda-tr-s5-inner,#chatDetailAlt .cda-tr-s7-text,#chatDetailAlt .cda-tr-s8-inner,#chatDetailAlt .cda-tr-s3-ghost,#chatDetailAlt .cda-tr-s9-ref,#chatDetailAlt .cda-tr-s10-stamp';
+        var nos='#chatDetailAlt .cda-dc-notif-text,#chatDetailAlt .cda-notif-a-text,#chatDetailAlt .cda-notif-b-text,#chatDetailAlt .cda-notif-c-text,#chatDetailAlt .cda-notif-d-text,#chatDetailAlt .cda-notif-e-text';
+        css+=bs+'{font-size:'+size+'px!important;line-height:1.55!important;}\n';
+        css+=ns+'{font-size:'+Math.max(11,Math.round(size*0.85))+'px!important;}\n';
+        if(fontName){
+            var fk='"'+fontName+'",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC","PingFang SC",sans-serif';
+            css+=bs+'{font-family:'+fk+'!important;}\n';
+            css+=ns+'{font-family:'+fk+'!important;}\n';
+            css+=ts+'{font-family:'+fk+'!important;}\n';
+            css+=nos+'{font-family:'+fk+'!important;}\n';
+        }
+        if(css){var s=document.createElement('style');s.id=styleId;s.textContent=css;document.head.appendChild(s);}
     }
     applyBubbleFont();
 
-    // CSS
+    // 加载自定义CSS到textarea（从IndexedDB）
+    (function(){
+        var ta=document.getElementById('csCssInput');
+        if(!ta)return;
+        if(typeof ChatDB!=='undefined'&&ChatDB.open){
+            ChatDB.open(function(d){
+                if(!d){ta.value=localStorage.getItem('ca-custom-css')||'';return;}
+                var tx=d.transaction('avatars','readonly');
+                var req=tx.objectStore('avatars').get('custom_css');
+                req.onsuccess=function(){
+                    var val=(req.result&&req.result.data)?req.result.data:'';
+                    ta.value=val||(localStorage.getItem('ca-custom-css')||'');
+                };
+                req.onerror=function(){ta.value=localStorage.getItem('ca-custom-css')||'';};
+            });
+        }else{
+            ta.value=localStorage.getItem('ca-custom-css')||'';
+        }
+    })();
+
+    // CSS（存IndexedDB，不受localStorage 5MB限制）
     var cssSave=document.getElementById('csCssSave');
     var cssReset=document.getElementById('csCssReset');
     if(cssSave){
         cssSave.addEventListener('click',function(){
             var val=document.getElementById('csCssInput').value;
-            localStorage.setItem('ca-custom-css',val);
+            // 应用到页面
             var styleNode=document.getElementById('ca-custom-css-node');
             if(!styleNode){
                 styleNode=document.createElement('style');
@@ -1080,6 +1406,20 @@ function bindSettingsEvents(entId){
                 document.head.appendChild(styleNode);
             }
             styleNode.textContent=val;
+            // 存到IndexedDB
+            if(typeof ChatDB!=='undefined'&&ChatDB.open){
+                ChatDB.open(function(d){
+                    if(!d){
+                        // fallback: 尝试localStorage
+                        try{localStorage.setItem('ca-custom-css',val);}catch(e){}
+                        return;
+                    }
+                    var tx=d.transaction('avatars','readwrite');
+                    tx.objectStore('avatars').put({id:'custom_css',data:val});
+                });
+            }else{
+                try{localStorage.setItem('ca-custom-css',val);}catch(e){}
+            }
             cssSave.textContent='✓ Applied';
             setTimeout(function(){cssSave.textContent='Apply';},1200);
         });
@@ -1087,7 +1427,6 @@ function bindSettingsEvents(entId){
     if(cssReset){
         cssReset.addEventListener('click',function(){
             document.getElementById('csCssInput').value='';
-            localStorage.removeItem('ca-custom-css');
             var styleNode=document.getElementById('ca-custom-css-node');
             if(!styleNode){
                 styleNode=document.createElement('style');
@@ -1095,6 +1434,15 @@ function bindSettingsEvents(entId){
                 document.head.appendChild(styleNode);
             }
             styleNode.textContent='';
+            // 清除存储
+            try{localStorage.removeItem('ca-custom-css');}catch(e){}
+            if(typeof ChatDB!=='undefined'&&ChatDB.open){
+                ChatDB.open(function(d){
+                    if(!d)return;
+                    var tx=d.transaction('avatars','readwrite');
+                    tx.objectStore('avatars').delete('custom_css');
+                });
+            }
         });
     }
 
@@ -1151,7 +1499,7 @@ function bindSettingsEvents(entId){
             card.style.cssText='position:relative;width:100%;max-width:320px;background:#fff;border-radius:20px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,0.25);';
             card.innerHTML=
                 '<div style="font-size:9px;font-weight:800;letter-spacing:2px;color:rgba(26,26,31,0.3);text-transform:uppercase;margin-bottom:12px;">Edit Memory</div>'+
-                '<textarea id="csMemEditTA" style="width:100%;min-height:80px;max-height:200px;border:1px solid rgba(26,26,31,0.1);border-radius:12px;padding:12px;font-size:13px;line-height:1.5;color:#1a1a1f;outline:none;resize:none;font-family:inherit;">'+escapeHtml(currentVal)+'</textarea>'+
+                '<textarea id="csCssInput" style="width:100%;height:70px;background:rgba(26,26,31,0.02);border:0.5px solid rgba(26,26,31,0.06);border-radius:10px;padding:10px;font-family:monospace;font-size:10px;color:#1a1a1f;outline:none;resize:none;line-height:1.5;" placeholder="/* custom styles */"></textarea>'+
                 '<div style="display:flex;gap:10px;margin-top:14px;">'+
                     '<button id="csMemEditCancel" style="flex:1;padding:12px;border-radius:50px;border:1px solid rgba(26,26,31,0.12);background:transparent;font-size:9px;font-weight:700;cursor:pointer;color:#1a1a1f;">取消</button>'+
                     '<button id="csMemEditSave" style="flex:1;padding:12px;border-radius:50px;border:none;background:#1a1a1f;color:#fff;font-size:9px;font-weight:700;cursor:pointer;">保存</button>'+
@@ -1667,6 +2015,301 @@ function bindSettingsEvents(entId){
         var initTgn;try{initTgn=localStorage.getItem('ca-tgn-style')||'off';}catch(e){initTgn='off';}
         renderTgnPreview(initTgn);
     }
+
+    // 标签 / 时间戳系统
+    (function(){
+        var storageKey='ca-bubble-labels-'+entId;
+        function loadLabels(){try{return JSON.parse(localStorage.getItem(storageKey)||'[]');}catch(e){return[];}}
+        function saveLabels(arr){localStorage.setItem(storageKey,JSON.stringify(arr));window.dispatchEvent(new CustomEvent('cda-settings-changed'));updateLabelPreview(arr);}
+
+                function updateLabelPreview(labels){
+            var recvWrap=document.querySelector('.cs-lbl-prev-wrap-recv');
+            var sentWrap=document.querySelector('.cs-lbl-prev-wrap-sent');
+            if(!recvWrap||!sentWrap)return;
+            recvWrap.querySelectorAll('.cs-lbl-prev-tag').forEach(function(el){el.remove();});
+            sentWrap.querySelectorAll('.cs-lbl-prev-tag').forEach(function(el){el.remove();});
+            // 重置wrap样式
+            recvWrap.style.cssText='position:relative;display:inline-block;max-width:70%;';
+            sentWrap.style.cssText='position:relative;display:inline-block;max-width:70%;';
+            labels.forEach(function(lb){
+                if(!lb.on)return;
+                var text=lb.type==='time'?'14:30':(lb.text||'label');
+                var size=lb.size||9;
+                var color=lb.color||'rgba(26,26,31,0.3)';
+                var offX=lb.offX||0;
+                var offY=lb.offY||0;
+                var pos=lb.pos||'below';
+                var target=lb.target||'both';
+                var baseStyle='font-size:'+size+'px;color:'+color+';white-space:nowrap;pointer-events:none;line-height:1.2;';
+                function makeTag(wrap,side){
+                    var tag=document.createElement('span');
+                    tag.className='cs-lbl-prev-tag';
+                    tag.textContent=text;
+                    if(pos==='below'){
+                        tag.style.cssText=baseStyle+'display:block;margin-top:'+offY+'px;'+(offX!==0?'margin-left:'+offX+'px;':'')+'text-align:'+(side==='sent'?'right':'left')+';';
+                        wrap.appendChild(tag);
+                    }else if(pos==='above'){
+                        tag.style.cssText=baseStyle+'display:block;margin-bottom:'+offY+'px;'+(offX!==0?'margin-left:'+offX+'px;':'')+'text-align:'+(side==='sent'?'right':'left')+';';
+                        wrap.insertBefore(tag,wrap.firstChild);
+                    }else if(pos==='right'){
+                        wrap.style.display='flex';wrap.style.alignItems='flex-end';wrap.style.gap='0px';
+                        tag.style.cssText=baseStyle+'flex-shrink:0;position:relative;bottom:'+(-offY)+'px;margin-left:'+(4+offX)+'px;';
+                        wrap.appendChild(tag);
+                    }else if(pos==='left'){
+                        wrap.style.display='flex';wrap.style.alignItems='flex-end';wrap.style.gap='0px';
+                        tag.style.cssText=baseStyle+'flex-shrink:0;position:relative;bottom:'+(-offY)+'px;margin-right:'+(4+offX)+'px;';
+                        wrap.insertBefore(tag,wrap.firstChild);
+                    }else if(pos==='inline-right'){
+                        tag.style.cssText=baseStyle+'position:absolute;bottom:'+(2+offY)+'px;right:'+(6-offX)+'px;';
+                        var bubble=wrap.querySelector('div');
+                        if(bubble)bubble.appendChild(tag);
+                    }else if(pos==='inline-left'){
+                        tag.style.cssText=baseStyle+'position:absolute;bottom:'+(2+offY)+'px;left:'+(6+offX)+'px;';
+                        var bubble2=wrap.querySelector('div');
+                        if(bubble2)bubble2.appendChild(tag);
+                    }
+                }
+                if(target==='both'||target==='recv')makeTag(recvWrap,'recv');
+                if(target==='both'||target==='sent')makeTag(sentWrap,'sent');
+            });
+        }
+
+        function renderLabelList(){
+            var list=document.getElementById('csBubbleLabelList');
+            if(!list)return;
+            var labels=loadLabels();
+            var html='';
+            labels.forEach(function(lb,i){
+                var isTime=lb.type==='time';
+                // 折叠头
+                html+='<div style="background:rgba(26,26,31,0.02);border:0.5px solid rgba(26,26,31,0.06);border-radius:12px;margin-bottom:8px;overflow:hidden;">';
+                html+='<div data-lbl-header="'+i+'" style="display:flex;align-items:center;padding:10px 12px;cursor:pointer;gap:8px;">';
+                html+='<div class="cs-toggle'+(lb.on?' on':'')+'" data-lbl-toggle="'+i+'" style="flex-shrink:0;"></div>';
+                html+='<span style="font-size:10px;font-weight:700;color:#1a1a1f;flex:1;">#'+(i+1)+' '+(isTime?'⏱ 时间戳':'✏ '+escapeHtml(lb.text||'标签'))+'</span>';
+                html+='<svg data-lbl-chevron="'+i+'" viewBox="0 0 24 24" style="width:12px;height:12px;stroke:rgba(26,26,31,0.25);fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;transition:transform 0.3s;flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>';
+                html+='<div data-lbl-del="'+i+'" style="width:20px;height:20px;border-radius:50%;background:rgba(26,26,31,0.06);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:10px;color:rgba(26,26,31,0.4);flex-shrink:0;margin-left:4px;">×</div>';
+                html+='</div>';
+                // 折叠体
+                html+='<div data-lbl-body="'+i+'" style="max-height:0;overflow:hidden;transition:max-height 0.4s cubic-bezier(0.16,1,0.3,1);">';
+                html+='<div style="padding:0 12px 12px;">';
+                // 类型
+                html+='<div style="font-size:8px;color:rgba(26,26,31,0.3);margin-bottom:6px;letter-spacing:0.5px;">TYPE</div>';
+                html+='<div class="cs-caps" style="margin-bottom:10px;"><div class="cs-cap'+(lb.type==='fixed'?' active':'')+'" data-lbl-type="fixed" data-lbl-idx="'+i+'">固定文字</div><div class="cs-cap'+(lb.type==='time'?' active':'')+'" data-lbl-type="time" data-lbl-idx="'+i+'">时间戳</div></div>';
+                // 固定文字
+                html+='<div data-lbl-fixed-wrap="'+i+'" style="'+(isTime?'display:none;':'')+'margin-bottom:10px;"><input type="text" data-lbl-text="'+i+'" value="'+escapeHtml(lb.text||'')+'" placeholder="输入文字..." style="width:100%;border:none;border-bottom:0.5px solid rgba(26,26,31,0.1);background:transparent;font-size:12px;padding:5px 0;outline:none;color:#1a1a1f;"></div>';
+                // 时间格式
+                html+='<div data-lbl-time-wrap="'+i+'" style="'+(isTime?'':'display:none;')+'margin-bottom:10px;"><div style="font-size:8px;color:rgba(26,26,31,0.3);margin-bottom:6px;letter-spacing:0.5px;">FORMAT</div><div class="cs-caps">';
+                [{v:'HH:mm',n:'14:30'},{v:'hh:mm',n:'2:30'},{v:'HH:mm:ss',n:'14:30:05'},{v:'a h:mm',n:'下午 2:30'}].forEach(function(f){
+                    html+='<div class="cs-cap'+(lb.format===f.v?' active':'')+'" data-lbl-fmt="'+f.v+'" data-lbl-idx="'+i+'">'+f.n+'</div>';
+                });
+                html+='</div></div>';
+                // 应用到
+                html+='<div style="font-size:8px;color:rgba(26,26,31,0.3);margin-bottom:6px;letter-spacing:0.5px;">TARGET</div>';
+                html+='<div class="cs-caps" style="margin-bottom:10px;">';
+                [{v:'both',n:'双方'},{v:'sent',n:'我的'},{v:'recv',n:'对方'}].forEach(function(t){
+                    html+='<div class="cs-cap'+(lb.target===t.v?' active':'')+'" data-lbl-target="'+t.v+'" data-lbl-idx="'+i+'">'+t.n+'</div>';
+                });
+                html+='</div>';
+                // 模式
+                html+='<div style="font-size:8px;color:rgba(26,26,31,0.3);margin-bottom:6px;letter-spacing:0.5px;">MODE</div>';
+                html+='<div class="cs-caps" style="margin-bottom:10px;">';
+                [{v:'last',n:'最后一条'},{v:'all',n:'全部'},{v:'first',n:'第一条'}].forEach(function(m){
+                    html+='<div class="cs-cap'+(lb.mode===m.v?' active':'')+'" data-lbl-mode="'+m.v+'" data-lbl-idx="'+i+'">'+m.n+'</div>';
+                });
+                html+='</div>';
+                // 位置
+                html+='<div style="font-size:8px;color:rgba(26,26,31,0.3);margin-bottom:6px;letter-spacing:0.5px;">POSITION</div>';
+                html+='<div class="cs-caps" style="margin-bottom:10px;">';
+                [{v:'below',n:'下方'},{v:'above',n:'上方'},{v:'right',n:'右侧'},{v:'left',n:'左侧'},{v:'inline-right',n:'内右'},{v:'inline-left',n:'内左'}].forEach(function(p){
+                    html+='<div class="cs-cap'+(lb.pos===p.v?' active':'')+'" data-lbl-pos="'+p.v+'" data-lbl-idx="'+i+'">'+p.n+'</div>';
+                });
+                html+='</div>';
+                // 字号
+                html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span style="font-size:8px;color:rgba(26,26,31,0.3);flex-shrink:0;width:28px;">字号</span><input type="range" data-lbl-size="'+i+'" min="6" max="14" step="1" value="'+(lb.size||9)+'" style="flex:1;accent-color:#1a1a1f;"><span data-lbl-size-val="'+i+'" style="font-size:9px;font-weight:700;color:#1a1a1f;min-width:20px;text-align:right;">'+(lb.size||9)+'</span></div>';
+                // X
+                html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span style="font-size:8px;color:rgba(26,26,31,0.3);flex-shrink:0;width:28px;">X</span><input type="range" data-lbl-offx="'+i+'" min="-40" max="40" step="1" value="'+(lb.offX||0)+'" style="flex:1;accent-color:#1a1a1f;"><span data-lbl-offx-val="'+i+'" style="font-size:9px;font-weight:700;color:#1a1a1f;min-width:20px;text-align:right;">'+(lb.offX||0)+'</span></div>';
+                // Y
+                html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span style="font-size:8px;color:rgba(26,26,31,0.3);flex-shrink:0;width:28px;">Y</span><input type="range" data-lbl-offy="'+i+'" min="-40" max="40" step="1" value="'+(lb.offY||0)+'" style="flex:1;accent-color:#1a1a1f;"><span data-lbl-offy-val="'+i+'" style="font-size:9px;font-weight:700;color:#1a1a1f;min-width:20px;text-align:right;">'+(lb.offY||0)+'</span></div>';
+                // 颜色
+                html+='<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:8px;color:rgba(26,26,31,0.3);flex-shrink:0;width:28px;">色</span><input type="color" data-lbl-color="'+i+'" value="'+(lb.colorHex||'#999999')+'" style="width:28px;height:28px;border:none;border-radius:6px;cursor:pointer;background:transparent;padding:0;"></div>';
+                html+='</div></div>';// 关闭body+padding
+                html+='</div>';// 关闭item
+            });
+            list.innerHTML=html;
+            bindLabelEvents();
+            updateLabelPreview(labels);
+        }
+
+        function bindLabelEvents(){
+            var list=document.getElementById('csBubbleLabelList');
+            if(!list)return;
+            var labels=loadLabels();
+            // 折叠展开
+            list.querySelectorAll('[data-lbl-header]').forEach(function(hd){
+                hd.addEventListener('click',function(e){
+                    if(e.target.closest('[data-lbl-toggle]')||e.target.closest('[data-lbl-del]'))return;
+                    var idx=hd.dataset.lblHeader;
+                    var body=list.querySelector('[data-lbl-body="'+idx+'"]');
+                    var chevron=list.querySelector('[data-lbl-chevron="'+idx+'"]');
+                    if(!body)return;
+                    var isOpen=body.style.maxHeight&&body.style.maxHeight!=='0px'&&body.style.maxHeight!=='0';
+                    if(isOpen){
+                        body.style.maxHeight='0';
+                        if(chevron)chevron.style.transform='rotate(0deg)';
+                    }else{
+                        body.style.maxHeight='600px';
+                        if(chevron)chevron.style.transform='rotate(180deg)';
+                    }
+                });
+            });
+            // Toggle
+            list.querySelectorAll('[data-lbl-toggle]').forEach(function(tog){
+                tog.addEventListener('click',function(e){
+                    e.stopPropagation();
+                    tog.classList.toggle('on');
+                    var idx=parseInt(tog.dataset.lblToggle,10);
+                    labels[idx].on=tog.classList.contains('on');
+                    saveLabels(labels);
+                });
+            });
+            // Delete
+            list.querySelectorAll('[data-lbl-del]').forEach(function(btn){
+                btn.addEventListener('click',function(e){
+                    e.stopPropagation();
+                    var idx=parseInt(btn.dataset.lblDel,10);
+                    labels.splice(idx,1);
+                    saveLabels(labels);
+                    renderLabelList();
+                });
+            });
+            // Type
+            list.querySelectorAll('[data-lbl-type]').forEach(function(cap){
+                cap.addEventListener('click',function(e){
+                    e.stopPropagation();
+                    var idx=parseInt(cap.dataset.lblIdx,10);
+                    cap.parentElement.querySelectorAll('.cs-cap').forEach(function(c){c.classList.remove('active');});
+                    cap.classList.add('active');
+                    labels[idx].type=cap.dataset.lblType;
+                    saveLabels(labels);
+                    var fw=list.querySelector('[data-lbl-fixed-wrap="'+idx+'"]');
+                    var tw=list.querySelector('[data-lbl-time-wrap="'+idx+'"]');
+                    if(labels[idx].type==='time'){if(fw)fw.style.display='none';if(tw)tw.style.display='';}
+                    else{if(fw)fw.style.display='';if(tw)tw.style.display='none';}
+                    // 更新头部标题
+                    var hd=list.querySelector('[data-lbl-header="'+idx+'"] span');
+                    if(hd)hd.textContent='#'+(idx+1)+' '+(labels[idx].type==='time'?'⏱ 时间戳':'✏ '+escapeHtml(labels[idx].text||'标签'));
+                });
+            });
+            // Format
+            list.querySelectorAll('[data-lbl-fmt]').forEach(function(cap){
+                cap.addEventListener('click',function(e){
+                    e.stopPropagation();
+                    var idx=parseInt(cap.dataset.lblIdx,10);
+                    cap.parentElement.querySelectorAll('.cs-cap').forEach(function(c){c.classList.remove('active');});
+                    cap.classList.add('active');
+                    labels[idx].format=cap.dataset.lblFmt;
+                    saveLabels(labels);
+                });
+            });
+            // Target
+            list.querySelectorAll('[data-lbl-target]').forEach(function(cap){
+                cap.addEventListener('click',function(e){
+                    e.stopPropagation();
+                    var idx=parseInt(cap.dataset.lblIdx,10);
+                    cap.parentElement.querySelectorAll('[data-lbl-target]').forEach(function(c){c.classList.remove('active');});
+                    cap.classList.add('active');
+                    labels[idx].target=cap.dataset.lblTarget;
+                    saveLabels(labels);
+                });
+            });
+            // Mode
+            list.querySelectorAll('[data-lbl-mode]').forEach(function(cap){
+                cap.addEventListener('click',function(e){
+                    e.stopPropagation();
+                    var idx=parseInt(cap.dataset.lblIdx,10);
+                    cap.parentElement.querySelectorAll('[data-lbl-mode]').forEach(function(c){c.classList.remove('active');});
+                    cap.classList.add('active');
+                    labels[idx].mode=cap.dataset.lblMode;
+                    saveLabels(labels);
+                });
+            });
+            // Position
+            list.querySelectorAll('[data-lbl-pos]').forEach(function(cap){
+                cap.addEventListener('click',function(e){
+                    e.stopPropagation();
+                    var idx=parseInt(cap.dataset.lblIdx,10);
+                    cap.parentElement.querySelectorAll('[data-lbl-pos]').forEach(function(c){c.classList.remove('active');});
+                    cap.classList.add('active');
+                    labels[idx].pos=cap.dataset.lblPos;
+                    saveLabels(labels);
+                });
+            });
+            // Text
+            list.querySelectorAll('[data-lbl-text]').forEach(function(inp){
+                var debounce=null;
+                inp.addEventListener('input',function(){
+                    var idx=parseInt(inp.dataset.lblText,10);
+                    labels[idx].text=inp.value;
+                    if(debounce)clearTimeout(debounce);
+                    debounce=setTimeout(function(){saveLabels(labels);},200);
+                });
+            });
+            // Size
+            list.querySelectorAll('[data-lbl-size]').forEach(function(sl){
+                sl.addEventListener('input',function(){
+                    var idx=parseInt(sl.dataset.lblSize,10);
+                    labels[idx].size=parseInt(sl.value,10);
+                    var v=list.querySelector('[data-lbl-size-val="'+idx+'"]');
+                    if(v)v.textContent=sl.value;
+                    saveLabels(labels);
+                });
+            });
+            // X
+            list.querySelectorAll('[data-lbl-offx]').forEach(function(sl){
+                sl.addEventListener('input',function(){
+                    var idx=parseInt(sl.dataset.lblOffx,10);
+                    labels[idx].offX=parseInt(sl.value,10);
+                    var v=list.querySelector('[data-lbl-offx-val="'+idx+'"]');
+                    if(v)v.textContent=sl.value;
+                    saveLabels(labels);
+                });
+            });
+            // Y
+            list.querySelectorAll('[data-lbl-offy]').forEach(function(sl){
+                sl.addEventListener('input',function(){
+                    var idx=parseInt(sl.dataset.lblOffy,10);
+                    labels[idx].offY=parseInt(sl.value,10);
+                    var v=list.querySelector('[data-lbl-offy-val="'+idx+'"]');
+                    if(v)v.textContent=sl.value;
+                    saveLabels(labels);
+                });
+            });
+            // Color
+            list.querySelectorAll('[data-lbl-color]').forEach(function(inp){
+                inp.addEventListener('input',function(){
+                    var idx=parseInt(inp.dataset.lblColor,10);
+                    var hex=inp.value;
+                    var r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+                    labels[idx].color='rgba('+r+','+g+','+b+',0.5)';
+                    labels[idx].colorHex=hex;
+                    saveLabels(labels);
+                });
+            });
+        }
+
+        // Add button
+        var addBtn=document.getElementById('csBubbleLabelAdd');
+        if(addBtn){
+            addBtn.addEventListener('click',function(){
+                var labels=loadLabels();
+                labels.push({on:true,type:'time',text:'',format:'HH:mm',target:'both',mode:'last',pos:'below',size:9,color:'rgba(26,26,31,0.3)',colorHex:'#999999',weight:'400',fontStyle:'normal',offX:0,offY:2});
+                saveLabels(labels);
+                renderLabelList();
+            });
+        }
+
+        renderLabelList();
+    })();
 
     // 符号过滤
     var filterInput=document.getElementById('csFilterChars');

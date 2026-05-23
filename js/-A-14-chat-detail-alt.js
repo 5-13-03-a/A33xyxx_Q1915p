@@ -37,10 +37,22 @@ var built=false;
 var currentEntId=null;
 var _cachedMaskAvatar='';
 
-function loadAndCacheMaskAvatar(cb){
+function getActiveMaskForEntity(entId){
     var masks;
     try{masks=JSON.parse(localStorage.getItem('ca-user-masks')||'[]');}catch(e){masks=[];}
-    var active=masks.find(function(m){return m.active;})||masks[0];
+    // 优先查绑定了当前联系人的面具
+    if(entId){
+        for(var i=0;i<masks.length;i++){
+            var bEnts=masks[i].boundEntities||[];
+            if(bEnts.indexOf(entId)>=0)return masks[i];
+        }
+    }
+    // 没找到绑定的，用全局激活的
+    return masks.find(function(m){return m.active;})||masks[0];
+}
+
+function loadAndCacheMaskAvatar(cb){
+    var active=getActiveMaskForEntity(currentEntId);
     if(!active){_cachedMaskAvatar='';if(cb)cb();return;}
     if(typeof ChatDB==='undefined'){_cachedMaskAvatar='';if(cb)cb();return;}
     ChatDB.open(function(d){
@@ -78,6 +90,15 @@ function build(){
             '.chat-detail-alt{overflow:hidden!important;overscroll-behavior:none!important;}'+
             '.chat-detail-alt .cda-messages{overscroll-behavior:contain!important;-webkit-overflow-scrolling:touch;}';
         document.head.appendChild(fixStyle);
+    }
+    if(!document.getElementById('cda-bubble-ts-style')){
+        var tsS=document.createElement('style');
+        tsS.id='cda-bubble-ts-style';
+        tsS.textContent=
+            '.cda-bubble-ts{display:block;font-size:9px;color:rgba(26,26,31,0.3);font-weight:400;white-space:nowrap;line-height:1.2;pointer-events:none;margin-top:2px;padding:0 2px;}'+
+            '.cda-msg-row.sent .cda-bubble-ts{text-align:right;}'+
+            '.cda-msg-row.received .cda-bubble-ts{text-align:left;}';
+        document.head.appendChild(tsS);
     }
     if(!document.getElementById('cda-tgn-style')){
         var tgnS=document.createElement('style');
@@ -134,7 +155,8 @@ function renderMessages(){
     if(!ent)return;
 
     // 如果内存中已有数据（删除/新增后），直接用内存渲染，不走异步DB
-    if(window._caConversations&&window._caConversations[currentEntId]){
+    // 也包括值为空数组的情况（用户清空了聊天）
+    if(window._caConversations&&window._caConversations[currentEntId]!==undefined&&window._caConversations[currentEntId]!==null){
         if(syncAnimating)return;
         doRenderMessages(area,ent);
         var renderedCount=area.querySelectorAll('.cda-msg-row,.cda-dc-notif-row,.cda-narr-line').length;
@@ -183,9 +205,13 @@ function renderMessages(){
                     if(_newText.indexOf('||||')!==-1){
                         _newText=_newText.replace(/\|\|\|\|/g,'\n');
                     }
-                    // 规范化翻译分隔符变体
+                    // 规范化翻译分隔符变体（含前后空格）
                     if(_newText.indexOf('|')!==-1&&/\|{2,4}\s*[Tt][Rr][Aa][Nn][Ss]\s*\|{2,4}/.test(_newText)){
                         _newText=_newText.replace(/\|{2,4}\s*[Tt][Rr][Aa][Nn][Ss]\s*\|{2,4}/g,'|||TRANS|||');
+                    }
+                    // 去掉分隔符前后的空格（AI有时会加空格）
+                    if(_newText.indexOf('|||TRANS|||')!==-1){
+                        _newText=_newText.replace(/\s*\|\|\|TRANS\|\|\|\s*/g,'|||TRANS|||');
                     }
                     // 修复所有变体的旁白标签格式错误
                     if(_newText.indexOf('♪')!==-1||_newText.indexOf('♫')!==-1){
@@ -607,6 +633,7 @@ function doRenderMessages(area,ent){
 
         // 统一把 |||| 转为 \n，只用换行来分段
         text=text.replace(/\|\|\|\|/g,'\n');
+        var _lineCount=0;
         var lines=text.split('\n');
         lines.forEach(function(line){
             var t=line.trim();
@@ -633,7 +660,25 @@ function doRenderMessages(area,ent){
                 t=tParts[0].trim();
                 transText=tParts[1]?tParts[1].trim():'';
             }
-            if(t.length>0)bubbles.push({type:type,text:t,trans:transText,msgIdx:_msgIdx,storedTime:m.time||''});
+            // 检测该行中的翻页标签
+            var _wtLineRegex=/\[(?:WT_TURN_PAGE|WT_PREV_PAGE|翻页|下一页|上一页)\]/g;
+            var _wtLineMatch;
+            var _wtLineTurns=[];
+            while((_wtLineMatch=_wtLineRegex.exec(t))!==null){
+                var _wtLTag=_wtLineMatch[0];
+                _wtLineTurns.push((_wtLTag==='[上一页]'||_wtLTag==='[WT_PREV_PAGE]')?'prev':'next');
+            }
+            t=t.replace(_wtLineRegex,'').trim();
+            // 先插文字气泡（如果清理后还有内容）
+            if(t.length>0){
+                bubbles.push({type:type,text:t,trans:transText,msgIdx:_msgIdx,lineIdx:_lineCount++,storedTime:m.time||''});
+            }
+            // 再在同一位置插翻页通知
+            if(_wtLineTurns.length>0){
+                _wtLineTurns.forEach(function(_ptd){
+                    bubbles.push({type:'__sysinfo__',text:'[WT_PAGE_TURN::'+_ptd+'::对方翻了一页]',storedTime:m.time?m.time.split(' ')[1]||'':'',msgIdx:_msgIdx});
+                });
+            }
         });
     });
 
@@ -756,6 +801,79 @@ function doRenderMessages(area,ent){
             return;
         }
 
+        // 一起看：阅读进度消息（不显示在聊天界面，只给AI看）
+        if(b.type==='__sysinfo__'&&b.text&&b.text.indexOf('[WT_READING::')===0){
+            _lastTimeLabel=_bTime;
+            lastType=null;
+            return;
+        }
+
+        // 一起看：翻页提示
+        if(b.type==='__sysinfo__'&&b.text&&b.text.indexOf('[WT_PAGE_TURN::')===0){
+            var _ptDir=b.text.indexOf('next')!==-1?'next':'prev';
+            html+='<div class="cda-dc-notif-row" data-msg-idx="'+b.msgIdx+'">'+
+                '<div style="display:flex;align-items:center;gap:6px;padding:4px 12px;border-radius:16px;background:rgba(26,26,31,0.02);border:0.5px solid rgba(26,26,31,0.06);">'+
+                    '<svg viewBox="0 0 24 24" style="width:10px;height:10px;stroke:rgba(26,26,31,0.25);fill:none;stroke-width:2;flex-shrink:0;"><polyline points="'+(_ptDir==='next'?'9 6 15 12 9 18':'15 18 9 12 15 6')+'"/></svg>'+
+                    '<span style="font-size:10px;color:rgba(26,26,31,0.25);font-weight:400;">对方翻了一页</span>'+
+                '</div>'+
+            '</div>';
+            _lastTimeLabel=_bTime;
+            lastType=null;
+            return;
+        }
+
+        // 一起看：退出通知
+        if(b.type==='__sysinfo__'&&b.text&&b.text.indexOf('[WT_EXIT::')===0){
+            html+='<div class="cda-dc-notif-row" data-msg-idx="'+b.msgIdx+'">'+
+                '<div style="display:flex;align-items:center;gap:6px;padding:4px 12px;border-radius:16px;background:rgba(26,26,31,0.02);border:0.5px solid rgba(26,26,31,0.06);">'+
+                    '<svg viewBox="0 0 24 24" style="width:10px;height:10px;stroke:rgba(26,26,31,0.25);fill:none;stroke-width:2;flex-shrink:0;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'+
+                    '<span style="font-size:10px;color:rgba(26,26,31,0.25);font-weight:400;">退出了一起看</span>'+
+                '</div>'+
+            '</div>';
+            _lastTimeLabel=_bTime;
+            lastType=null;
+            return;
+        }
+
+        // 一起看邀请卡片
+        if(b.type==='__sysinfo__'&&b.text&&b.text.indexOf('[WT_INVITE::')===0){
+            var _wtEndIdx=b.text.indexOf('::WT_END]');
+            var _wtRaw=_wtEndIdx!==-1?b.text.substring(12,_wtEndIdx):b.text.substring(12,b.text.length-1);
+            try{
+                var _wtData=JSON.parse(_wtRaw);
+                if(typeof WatchTogether!=='undefined'&&WatchTogether.buildInviteCardHtml){
+                    html+='<div class="cda-dc-notif-row" data-msg-idx="'+b.msgIdx+'">'+
+                        WatchTogether.buildInviteCardHtml(_wtData,b.msgIdx)+
+                    '</div>';
+                }
+            }catch(ex){console.error('[WT_INVITE parse error]',ex,_wtRaw);}
+            _lastTimeLabel=_bTime;
+            lastType=null;
+            return;
+        }
+
+        // 翻译开关通知
+        // 翻译开关通知
+        if(b.type==='__sysinfo__'&&b.text&&b.text.indexOf('[TRANS_NOTICE::')===0){
+            // 用正则统一解析，兼容 [TRANS_NOTICE::on] 和 [TRANS_NOTICE::on::Chinese] 两种格式
+            var _tnMatch=b.text.match(/\[TRANS_NOTICE::(on|off)(?:::([^\]]*))?\]/);
+            var _tnOn=_tnMatch&&_tnMatch[1]==='on';
+            var _tnLang=(_tnMatch&&_tnMatch[2])||'';
+            var _tnIcon=_tnOn
+                ?'<svg viewBox="0 0 24 24" style="width:11px;height:11px;stroke:rgba(26,26,31,0.35);fill:none;stroke-width:1.5;flex-shrink:0;stroke-linecap:round;stroke-linejoin:round;"><path d="M5 8l6 6"/><path d="M4 14l6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="M22 22l-5-10-5 10"/><path d="M14 18h6"/></svg>'
+                :'<svg viewBox="0 0 24 24" style="width:11px;height:11px;stroke:rgba(26,26,31,0.25);fill:none;stroke-width:1.5;flex-shrink:0;stroke-linecap:round;stroke-linejoin:round;"><path d="M5 8l6 6"/><path d="M4 14l6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="M22 22l-5-10-5 10"/><path d="M14 18h6"/><line x1="2" y1="2" x2="22" y2="22" stroke-width="1.5"/></svg>';
+            var _tnText=_tnOn
+                ?('翻译已开启'+(_tnLang?' · '+_tnLang:'')):'翻译已关闭';
+            var _tnColor=_tnOn?'rgba(26,26,31,0.35)':'rgba(26,26,31,0.2)';
+            html+='<div class="cda-dc-notif-row cda-trans-notif-row" data-msg-idx="'+b.msgIdx+'">'+
+                '<div style="display:flex;align-items:center;gap:6px;padding:4px 12px;border-radius:16px;background:rgba(26,26,31,0.02);border:0.5px solid rgba(26,26,31,0.05);">'+
+                    _tnIcon+
+                    '<span style="font-size:10px;color:'+_tnColor+';font-weight:500;">'+_tnText+'</span>'+
+                '</div>'+'</div>';_lastTimeLabel=_bTime;
+            lastType=null;
+            return;
+        }
+
         // 系统通知（收款等）
         if(b.type==='__sysinfo__'){
             var _isNarrNotif=(b.text==='♪♫'||b.text==='♪');
@@ -864,10 +982,11 @@ function doRenderMessages(area,ent){
 
         var sentAvHtml='';
         if(isSent&&avatarCfg.sent){
-            var userMasks;
-            try{userMasks=JSON.parse(localStorage.getItem('ca-user-masks')||'[]');}catch(ex){userMasks=[];}
-            var activeMask=userMasks.find(function(m){return m.active;});
+            var activeMask=getActiveMaskForEntity(currentEntId);
             var _sentAv=_cachedMaskAvatar;
+            var _sentAvContent=_sentAv
+                ?'<img src="'+_sentAv+'">'
+                :'<span style="font-size:9px;font-weight:700;color:#fff;">'+(activeMask&&activeMask.name?activeMask.name.charAt(0).toUpperCase():'U')+'</span>';
             if(isLast){
                 if(_sentAv){
                     sentAvHtml='<div class="cda-msg-av cda-sent-av"><img src="'+_sentAv+'"></div>';
@@ -876,7 +995,7 @@ function doRenderMessages(area,ent){
                     sentAvHtml='<div class="cda-msg-av cda-sent-av" style="background:#4a4a4f;">'+myInitial+'</div>';
                 }
             }else{
-                sentAvHtml='<div class="cda-msg-av cda-sent-av hidden"></div>';
+                sentAvHtml='<div class="cda-msg-av cda-sent-av hidden" style="background:#4a4a4f;">'+_sentAvContent+'</div>';
             }
         }
 
@@ -1058,11 +1177,12 @@ function doRenderMessages(area,ent){
                 }
                 // 把拆分后的 parts 直接渲染为多行（气泡+旁白交替）
                 // 先关闭当前 msg-row，逐段输出
+                var _narrLineCount=0;
                 parts.forEach(function(p,pi){
                     if(p.type==='narr'){
                         var _nsClass='';
-                        try{var _nc2=JSON.parse(localStorage.getItem('ca-narration-config')||'{}');if(_nc2.style&&_nc2.style!=='a')_nsClass=' ns-'+_nc2.style;}catch(ex2){}
-                        html+='<div class="cda-narr-line'+_nsClass+'" data-msg-idx="'+b.msgIdx+'">'+escapeHtml(applyFilter(p.content,'narr'))+'</div>';
+                        try{var _nc2=JSON.parse(localStorage.getItem('ca-narration-config-'+currentEntId)||localStorage.getItem('ca-narration-config')||'{}');if(_nc2.style&&_nc2.style!=='a')_nsClass=' ns-'+_nc2.style;}catch(ex2){}
+                        html+='<div class="cda-narr-line'+_nsClass+'" data-msg-idx="'+b.msgIdx+'" data-line-idx="'+(_narrLineCount++)+'">'+escapeHtml(applyFilter(p.content,'narr'))+'</div>';
                     }else if(p.content){
                         var pIsLast=(pi===parts.length-1)||(pi===parts.length-2&&parts[parts.length-1].type==='narr');
                         var pTailClass=pIsLast&&isLast?' has-tail':'';
@@ -1075,7 +1195,7 @@ function doRenderMessages(area,ent){
                                     :'<div class="cda-msg-av hidden" style="background:'+color+';">'+initial+'</div>';
                             }
                         }
-                        html+='<div class="cda-msg-row received'+pTailClass+'" data-msg-idx="'+b.msgIdx+'">'+
+                        html+='<div class="cda-msg-row received'+pTailClass+'" data-msg-idx="'+b.msgIdx+'" data-line-idx="'+(_narrLineCount++)+'">'+
                             pAvHtml+
                             '<div class="cda-bubble-wrap"><div class="cda-bubble">'+escapeHtml(applyFilter(p.content,'received'))+'</div></div>'+
                         '</div>';
@@ -1127,7 +1247,7 @@ function doRenderMessages(area,ent){
 
         var isTfRow=b.text==='__TRANSFER__';
         var finalTailClass=isTfRow?'':tailClass;
-        html+='<div class="cda-msg-row '+type+finalTailClass+groupClass+(isTfRow?' cda-tf-row':'')+'" data-msg-idx="'+b.msgIdx+'">'+ 
+        html+='<div class="cda-msg-row '+type+finalTailClass+groupClass+(isTfRow?' cda-tf-row':'')+'" data-msg-idx="'+b.msgIdx+'" data-line-idx="'+(b.lineIdx||0)+'">'+ 
             avHtml+
             bubbleContent+
             sentAvHtml+
@@ -1146,9 +1266,217 @@ function doRenderMessages(area,ent){
 
     area.innerHTML=html;
     updateTailClasses(area);
+    _injectBubbleLabels(area);
     area.scrollTop=area.scrollHeight-area.clientHeight;
     console.log('[CDA Debug] area childNodes after render:', area.childNodes.length);
 }
+
+
+function _injectBubbleLabels(area){
+    if(!area||!currentEntId)return;
+    area.querySelectorAll('.cda-bubble-lbl').forEach(function(el){el.remove();});
+    area.querySelectorAll('.cda-bubble-wrap').forEach(function(w){
+        if(w.getAttribute('style')&&w.style.display==='flex'){
+            w.style.display='';w.style.alignItems='';w.style.gap='';
+        }
+    });
+    var labels;
+    try{labels=JSON.parse(localStorage.getItem('ca-bubble-labels-'+currentEntId)||localStorage.getItem('ca-bubble-labels')||'[]');}catch(e){labels=[];}
+    if(labels.length===0)return;
+
+    var msgs=window._caConversations&&window._caConversations[currentEntId]?window._caConversations[currentEntId]:[];
+
+    labels.forEach(function(lb){
+        if(!lb.on)return;
+        var target=lb.target||'both';
+        var mode=lb.mode||'last';
+        var pos=lb.pos||'below';
+        var fmt=lb.format||'HH:mm';
+        var isTime=lb.type==='time';
+        var fixedText=lb.text||'';
+        var size=lb.size||9;
+        var color=lb.color||'rgba(26,26,31,0.3)';
+        var weight=lb.weight||'400';
+        var style=lb.fontStyle||'normal';
+        var offX=lb.offX||0;
+        var offY=lb.offY||0;
+
+        var rows=area.querySelectorAll('.cda-msg-row');
+        rows.forEach(function(row){
+            var isSent=row.classList.contains('sent');
+            var isRecv=row.classList.contains('received');
+            if(target==='sent'&&!isSent)return;
+            if(target==='recv'&&!isRecv)return;
+            if(target==='both'&&!isSent&&!isRecv)return;
+
+            var shouldShow=false;
+            if(mode==='all')shouldShow=true;
+            else if(mode==='last')shouldShow=row.classList.contains('has-tail');
+            else if(mode==='first')shouldShow=row.classList.contains('group-start');
+            if(!shouldShow)return;
+
+            var text='';
+            if(isTime){
+                var msgIdx=row.getAttribute('data-msg-idx');
+                if(msgIdx!==null){
+                    var idx=parseInt(msgIdx,10);
+                    if(msgs[idx]&&msgs[idx].time){
+                        var parts=msgs[idx].time.split(' ');
+                        var timePart=parts[1]||'';
+                        if(timePart){
+                            var hp=timePart.split(':');
+                            var h=parseInt(hp[0],10)||0;
+                            var m=hp[1]||'00';
+                            var s=hp[2]||'00';
+                            var h12=h%12||12;
+                            var ampm=h>=12?'下午':'上午';
+                            text=fmt.replace('HH',String(h).padStart(2,'0')).replace('hh',String(h12).padStart(2,'0')).replace('mm',m).replace('ss',s).replace('a',ampm);
+                        }
+                    }
+                }
+                if(!text){
+                    var now=new Date();
+                    text=fmt.replace('HH',String(now.getHours()).padStart(2,'0')).replace('hh',String(now.getHours()%12||12).padStart(2,'0')).replace('mm',String(now.getMinutes()).padStart(2,'0')).replace('ss',String(now.getSeconds()).padStart(2,'0')).replace('a',now.getHours()>=12?'下午':'上午');
+                }
+            }else{
+                text=fixedText;
+            }
+            if(!text)return;
+
+            var el=document.createElement('span');
+            el.className='cda-bubble-lbl';
+            el.textContent=text;
+
+            var baseStyle='font-size:'+size+'px;color:'+color+';font-weight:'+weight+';font-style:'+style+';white-space:nowrap;pointer-events:none;line-height:1.2;display:block;';
+
+            var wrap=row.querySelector('.cda-bubble-wrap');
+            var bubble=row.querySelector('.cda-bubble');
+            if(!wrap)return;
+
+            if(pos==='below'){
+                el.style.cssText=baseStyle+'margin-top:'+offY+'px;'+(offX!==0?'margin-left:'+offX+'px;':'')+'padding:0 2px;';
+                wrap.appendChild(el);
+            }else if(pos==='above'){
+                el.style.cssText=baseStyle+'margin-bottom:'+offY+'px;'+(offX!==0?'margin-left:'+offX+'px;':'')+'padding:0 2px;';
+                wrap.insertBefore(el,wrap.firstChild);
+            }else if(pos==='right'){
+                wrap.style.display='flex';wrap.style.alignItems='flex-end';wrap.style.gap='0px';
+                wrap.setAttribute('data-lbl-flex','1');
+                el.style.cssText=baseStyle+'flex-shrink:0;position:relative;bottom:'+(-offY)+'px;margin-left:'+(4+offX)+'px;';
+                wrap.appendChild(el);
+            }else if(pos==='left'){
+                wrap.style.display='flex';wrap.style.alignItems='flex-end';wrap.style.gap='0px';
+                wrap.setAttribute('data-lbl-flex','1');
+                el.style.cssText=baseStyle+'flex-shrink:0;position:relative;bottom:'+(-offY)+'px;margin-right:'+(4+offX)+'px;';
+                wrap.insertBefore(el,wrap.firstChild);
+            }else if(pos==='inline-right'&&bubble){
+                bubble.style.position='relative';
+                el.style.cssText=baseStyle+'position:absolute;bottom:'+(2+offY)+'px;right:'+(6-offX)+'px;';
+                bubble.appendChild(el);
+            }else if(pos==='inline-left'&&bubble){
+                bubble.style.position='relative';
+                el.style.cssText=baseStyle+'position:absolute;bottom:'+(2+offY)+'px;left:'+(6+offX)+'px;';
+                bubble.appendChild(el);
+            }
+        });
+    });
+}
+
+function _injectLabelForRow(row){
+    if(!row||!currentEntId)return;
+    var labels;
+    try{labels=JSON.parse(localStorage.getItem('ca-bubble-labels-'+currentEntId)||localStorage.getItem('ca-bubble-labels')||'[]');}catch(e){labels=[];}
+    if(labels.length===0)return;
+    var msgs=window._caConversations&&window._caConversations[currentEntId]?window._caConversations[currentEntId]:[];
+    var isSent=row.classList.contains('sent');
+    var isRecv=row.classList.contains('received');
+
+    labels.forEach(function(lb){
+        if(!lb.on)return;
+        var target=lb.target||'both';
+        if(target==='sent'&&!isSent)return;
+        if(target==='recv'&&!isRecv)return;
+        if(target==='both'&&!isSent&&!isRecv)return;
+
+        var mode=lb.mode||'last';
+        // 追加模式下，新气泡暂时都显示标签（最终由 _injectBubbleLabels 统一修正）
+        // 但 mode=all 肯定显示；mode=last/first 在逐条追加时无法准确判断，先都显示
+        var pos=lb.pos||'below';
+        var fmt=lb.format||'HH:mm';
+        var isTime=lb.type==='time';
+        var fixedText=lb.text||'';
+        var size=lb.size||9;
+        var color=lb.color||'rgba(26,26,31,0.3)';
+        var weight=lb.weight||'400';
+        var style=lb.fontStyle||'normal';
+        var offX=lb.offX||0;
+        var offY=lb.offY||0;
+
+        var text='';
+        if(isTime){
+            var msgIdx=row.getAttribute('data-msg-idx');
+            if(msgIdx!==null){
+                var idx=parseInt(msgIdx,10);
+                if(msgs[idx]&&msgs[idx].time){
+                    var parts=msgs[idx].time.split(' ');
+                    var timePart=parts[1]||'';
+                    if(timePart){
+                        var hp=timePart.split(':');
+                        var h=parseInt(hp[0],10)||0;
+                        var m=hp[1]||'00';
+                        var s=hp[2]||'00';
+                        var h12=h%12||12;
+                        var ampm=h>=12?'下午':'上午';
+                        text=fmt.replace('HH',String(h).padStart(2,'0')).replace('hh',String(h12).padStart(2,'0')).replace('mm',m).replace('ss',s).replace('a',ampm);
+                    }
+                }
+            }
+            if(!text){
+                var now=new Date();
+                text=fmt.replace('HH',String(now.getHours()).padStart(2,'0')).replace('hh',String(now.getHours()%12||12).padStart(2,'0')).replace('mm',String(now.getMinutes()).padStart(2,'0')).replace('ss',String(now.getSeconds()).padStart(2,'0')).replace('a',now.getHours()>=12?'下午':'上午');
+            }
+        }else{
+            text=fixedText;
+        }
+        if(!text)return;
+
+        var el=document.createElement('span');
+        el.className='cda-bubble-lbl';
+        el.textContent=text;
+        var baseStyle='font-size:'+size+'px;color:'+color+';font-weight:'+weight+';font-style:'+style+';white-space:nowrap;pointer-events:none;line-height:1.2;display:block;';
+
+        var wrap=row.querySelector('.cda-bubble-wrap');
+        var bubble=row.querySelector('.cda-bubble');
+        if(!wrap)return;
+
+        if(pos==='below'){
+            el.style.cssText=baseStyle+'margin-top:'+offY+'px;'+(offX!==0?'margin-left:'+offX+'px;':'')+'padding:0 2px;';
+            wrap.appendChild(el);
+        }else if(pos==='above'){
+            el.style.cssText=baseStyle+'margin-bottom:'+offY+'px;'+(offX!==0?'margin-left:'+offX+'px;':'')+'padding:0 2px;';
+            wrap.insertBefore(el,wrap.firstChild);
+        }else if(pos==='right'){
+            wrap.style.display='flex';wrap.style.alignItems='flex-end';wrap.style.gap='0px';
+            el.style.cssText=baseStyle+'flex-shrink:0;position:relative;bottom:'+(-offY)+'px;margin-left:'+(4+offX)+'px;';
+            wrap.appendChild(el);
+        }else if(pos==='left'){
+            wrap.style.display='flex';wrap.style.alignItems='flex-end';wrap.style.gap='0px';
+            el.style.cssText=baseStyle+'flex-shrink:0;position:relative;bottom:'+(-offY)+'px;margin-right:'+(4+offX)+'px;';
+            wrap.insertBefore(el,wrap.firstChild);
+        }else if(pos==='inline-right'&&bubble){
+            bubble.style.position='relative';
+            el.style.cssText=baseStyle+'position:absolute;bottom:'+(2+offY)+'px;right:'+(6-offX)+'px;';
+            bubble.appendChild(el);
+        }else if(pos==='inline-left'&&bubble){
+            bubble.style.position='relative';
+            el.style.cssText=baseStyle+'position:absolute;bottom:'+(2+offY)+'px;left:'+(6+offX)+'px;';
+            bubble.appendChild(el);
+        }
+    });
+}
+
+// 暴露给多选删除模块
+window._cdaDoRenderMessages=function(area,ent){doRenderMessages(area,ent);};
 
 function addUserMsg(text){
     if(!currentEntId)return;
@@ -1158,7 +1486,7 @@ function addUserMsg(text){
     var sendText=text;
     var isSpecial=text.indexOf('[IMAGE]')===0||text.indexOf('[TRANSFER_CARD::')===0;
     var timeConfig;
-    try{timeConfig=JSON.parse(localStorage.getItem('ca-time-config')||'{"on":false}');}catch(e){timeConfig={on:false};}
+    try{timeConfig=JSON.parse(localStorage.getItem('ca-time-config-'+currentEntId)||localStorage.getItem('ca-time-config')||'{"on":false}');}catch(e){timeConfig={on:false};}
     if(timeConfig.on&&!isSpecial){
         var _now=new Date();
         var _mo=timeConfig.custom&&timeConfig.customMonth?timeConfig.customMonth:_now.getMonth()+1;
@@ -1233,6 +1561,42 @@ function addAiMsg(text,callback){
     fullText=fullText.replace(/\[\s*\/?\s*-?\s*♪\s*-\s*♫\s*\]/g,function(match){
         return match.indexOf('/')!==-1?'[/♪♫]':'[♪♫]';
     });
+    //翻译格式容错：翻译模式开启时，AI 没加|||TRANS||| 分隔符的情况
+    // 检测是否有翻译配置且AI 回复缺少分隔符
+    (function(){
+        var _tc2;try{_tc2=JSON.parse(localStorage.getItem('ca-trans-config-14')||'{}');}catch(e){_tc2={};}
+        if(!_tc2||_tc2.style==='off'||!_tc2.transLang)return;
+        var _tLang=(_tc2.transLang||'Chinese').toLowerCase();
+        // 检查每一行：如果没有 |||TRANS||| 但行内存在双语混合的迹象
+        // 常见情况：AI 把原文和翻译用括号、斜线、"/"、"——"、空行隔开
+        var _lines=fullText.split('\n');
+        var _fixed=_lines.map(function(_line){
+            var _lt=_line.trim();
+            if(!_lt)return _line;
+            // 已经有分隔符，不处理
+            if(_lt.indexOf('|||TRANS|||')!==-1)return _line;
+            // 跳过旁白标签行
+            if(_lt.indexOf('[♪♫]')!==-1)return _line;
+            // 检测常见的双语分隔模式：
+            // 1. "原文 / 译文" 或 "原文／译文"
+            // 2. "原文（译文）"——括号内是翻译
+            // 3. "原文\n译文" 两行紧挨（行级别已处理）
+            // 简单容错：检测 " / " 或 "（" 模式的双语混合，但这太激进容易误触发
+            // 更保守的方案：只在行包含明确的双斜杠或 pipe 分隔时处理
+            if(/\s*[\/|]\s*/.test(_lt)&&_lt.split(/\s*[\/|]\s*/).length===2){
+                var _parts=_lt.split(/\s*[\/|]\s*/);
+                // 简单判断：两段都有实质内容，且不是 URL
+                if(_parts[0].trim().length>1&&_parts[1].trim().length>1&&_lt.indexOf('://')===-1){
+                    return _parts[0].trim()+'|||TRANS|||'+_parts[1].trim();
+                }
+            }
+            return _line;
+        });
+        // 只有当有行被修复时才更新
+        var _fixedText=_fixed.join('\n');
+        if(_fixedText!==fullText){
+            fullText=_fixedText;}
+    })();
     var msg={role:'assistant',text:fullText,time:dateTimeNow()};
     window._caConversations[currentEntId].push(msg);
 
@@ -1276,8 +1640,27 @@ function addAiMsg(text,callback){
         ChatDB.saveConversation(currentEntId,window._caConversations[currentEntId]);
     }
 
+    // 检测AI是否发出翻页指令（清除标签，不在气泡中显示）
+    var _wtHasNext=fullText.indexOf('[WT_TURN_PAGE]')!==-1||fullText.indexOf('[翻页]')!==-1||fullText.indexOf('[下一页]')!==-1;
+    var _wtHasPrev=fullText.indexOf('[上一页]')!==-1||fullText.indexOf('[WT_PREV_PAGE]')!==-1;
+    fullText=fullText.replace(/\[WT_TURN_PAGE\]/g,'').replace(/\[翻页\]/g,'').replace(/\[下一页\]/g,'').replace(/\[上一页\]/g,'').replace(/\[WT_PREV_PAGE\]/g,'').trim();
+    if(_wtHasNext){
+        window.dispatchEvent(new CustomEvent('wt-ai-turn-page',{detail:{direction:'next'}}));
+    }
+    if(_wtHasPrev){
+        window.dispatchEvent(new CustomEvent('wt-ai-turn-page',{detail:{direction:'prev'}}));
+    }
+
+    // 更新存储的消息文本（清除翻页标签）
+    msg.text=fullText;
+    if(typeof ChatDB!=='undefined'&&ChatDB.saveConversation){
+        ChatDB.saveConversation(currentEntId,window._caConversations[currentEntId]);
+    }
+
     // 直接追加气泡到 DOM 并逐条播放动画（不全量重渲染）
-    appendAiBubbles(fullText,function(){insertTgnIfNeeded();});
+    if(fullText){
+        appendAiBubbles(fullText,function(){insertTgnIfNeeded();});
+    }
 
     // 检查自动总结阈值
     var _autoThreshold=parseInt(localStorage.getItem('ca-auto-sum-threshold-'+currentEntId)||'0',10);
@@ -1350,13 +1733,12 @@ function addAiMsg(text,callback){
                 }
                 var transcript=_filteredForSum.map(function(m,i){
                     var _tStr=m.time||'';
-                    var _timeHM='';
+                    var _dTime='';
                     if(_tStr){
-                        var _hmMatch=_tStr.match(/(\d{1,2}:\d{2})$/);
-                        if(_hmMatch)_timeHM=_hmMatch[1];
+                        // 完整保留日期+时间，如 "2025-01-20 14:30"
+                        _dTime=_tStr;
                     }
                     var _roleL=m.role==='user'?_sumUserName:_sumCharName;
-                    var _dTime=_timeHM||_tStr||'';
                     return '['+(i+1)+']'+(_dTime?' ['+_dTime+']':'')+' '+_roleL+'：'+m.text;
                 }).join('\n');
                 var apiConfig;try{apiConfig=JSON.parse(localStorage.getItem('ca-api-config')||'{}');}catch(e){return;}
@@ -1392,15 +1774,15 @@ function addAiMsg(text,callback){
                     'HIGH — 改变关系走向的核心事件（通常整段对话只有0-2条）\n'+
                     'MID — 丰富关系细节的重要信息（通常2-4条）\n'+
                     'LOW — 临时性的氛围/状态（通常1-2条）\n\n'+
-                    '【输出格式】每条独立一行，写事件经过而非引用原话：\n'+
-                    'HIGH: [时间] 事件经过描述（含双方情绪反应）\n'+
-                    'MID: [时间] 事件/信息描述\n'+
-                    'LOW: 当前状态/氛围描述\n\n'+
+                    '【输出格式】每条独立一行，时间必须包含完整日期（X月X日 HH:MM 24小时制），写事件经过而非引用原话：\n'+
+                    'HIGH: [X月X日 HH:MM] 事件经过描述（含双方情绪反应）\n'+
+                    'MID: [X月X日 HH:MM] 事件/信息描述\n'+
+                    'LOW: [X月X日] 当前状态/氛围描述\n\n'+
                     '【示例】\n'+
-                    'HIGH: [22:14] [user]突然说想见[char]，[char]沉默很久后承认自己也想见面，两人关系从暧昧进入明确的互相喜欢阶段。\n'+
-                    'MID: [22:30] [char]透露自己害怕雷声，[user]说下次打雷会陪着，[char]感到被在乎。\n'+
-                    'MID: [22:45] [user]给[char]转账520元备注"想你了"，[char]收下并表示开心。\n'+
-                    'LOW: 本段对话整体氛围温馨亲密，[char]比之前更主动表达情感。\n\n'+
+                    'HIGH: [1月20日 22:14] [user]突然说想见[char]，[char]沉默很久后承认自己也想见面，两人关系从暧昧进入明确的互相喜欢阶段。\n'+
+                    'MID: [1月20日 22:30] [char]透露自己害怕雷声，[user]说下次打雷会陪着，[char]感到被在乎。\n'+
+                    'MID: [1月20日 22:45] [user]给[char]转账520元备注"想你了"，[char]收下并表示开心。\n'+
+                    'LOW: [1月20日] 本段对话整体氛围温馨亲密，[char]比之前更主动表达情感。\n\n'+
                     '对话记录：\n'+transcript;
                 fetch(ep,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.key},body:JSON.stringify({model:model,messages:[{role:'user',content:sumPrompt}],max_tokens:800,temperature:0.4})})
                 .then(function(r){return r.json();})
@@ -1440,10 +1822,11 @@ function appendUserBubbles(displayText,rawText){
         row.innerHTML='<div class="cda-bubble-wrap"><div class="cda-bubble cda-bubble-img" style="padding:4px;background:transparent;border:none;box-shadow:none;"><img src="'+imgSrc+'" style="max-width:200px;max-height:200px;border-radius:12px;display:block;"></div></div>';
         area.appendChild(row);
         animateBubbleIn(row,animClass);
-        updateTailClasses(area);
-        smoothScrollToBottom(area);
-        return;
-    }
+    updateTailClasses(area);
+    setTimeout(function(){_injectBubbleLabels(area);},60);
+    smoothScrollToBottom(area);
+    return;
+}
     // 转账
     if(text.indexOf('[TRANSFER_CARD::')===0){
         renderMessagesNoAnim();
@@ -1464,9 +1847,7 @@ function appendUserBubbles(displayText,rawText){
 
         var sentAvHtml='';
         if(avatarCfg.sent){
-            var userMasks;
-            try{userMasks=JSON.parse(localStorage.getItem('ca-user-masks')||'[]');}catch(ex){userMasks=[];}
-            var activeMask=userMasks.find(function(m){return m.active;});
+            var activeMask=getActiveMaskForEntity(currentEntId);
             var _sentAv2=_cachedMaskAvatar;
             if(_sentAv2){
                 sentAvHtml='<div class="cda-msg-av cda-sent-av"><img src="'+_sentAv2+'"></div>';
@@ -1482,6 +1863,7 @@ function appendUserBubbles(displayText,rawText){
     });
 
     updateTailClasses(area);
+    _injectBubbleLabels(area);
     smoothScrollToBottom(area);
 }
 
@@ -1506,7 +1888,7 @@ function appendAiBubbles(fullText,callback){
 
     // 解析旁白
     var narrConfig;
-    try{narrConfig=JSON.parse(localStorage.getItem('ca-narration-config')||'{}');}catch(e){narrConfig={};}
+    try{narrConfig=JSON.parse(localStorage.getItem('ca-narration-config-'+currentEntId)||localStorage.getItem('ca-narration-config')||'{}');}catch(e){narrConfig={};}
 
     // 拆分成段落（普通文本 + 旁白）
     var segments=[];
@@ -1540,7 +1922,7 @@ function appendAiBubbles(fullText,callback){
 
     var idx=0;
     function showNext(){
-        if(idx>=segments.length){updateTailClasses(area);if(callback)callback();return;}
+        if(idx>=segments.length){updateTailClasses(area);setTimeout(function(){_injectBubbleLabels(area);},60);if(callback)callback();return;}
         var seg=segments[idx];
         idx++;
 
@@ -1601,7 +1983,6 @@ function appendAiBubbles(fullText,callback){
                 }else if(transStyle==='flip'){
                     row.innerHTML=avHtml+'<div class="cda-bubble-wrap"><div class="cda-bubble cda-tr-s2-wrap" onclick="this.classList.toggle(\'cda-tr-s2-active\')"><div class="cda-tr-s2-card"><div class="cda-tr-s2-front">'+escapeHtml(mainText)+'</div><div class="cda-tr-s2-back">'+tr+'</div></div></div></div>';
                     area.appendChild(row);
-                    updateTailClasses(area);
                     animateBubbleIn(row,animClass);
                     smoothScrollToBottom(area);
                     var delay2=Math.round(getBaseDelay(seg.text.length)*getSpeedMul());
@@ -1610,7 +1991,6 @@ function appendAiBubbles(fullText,callback){
                 }else if(transStyle==='ghost'){
                     row.innerHTML=avHtml+'<div class="cda-bubble-wrap" onclick="this.classList.toggle(\'cda-tr-s3-active\')"><div class="cda-bubble">'+escapeHtml(mainText)+'</div><div class="cda-tr-s3-ghost">'+tr+'</div></div>';
                     area.appendChild(row);
-                    updateTailClasses(area);
                     animateBubbleIn(row,animClass);
                     smoothScrollToBottom(area);
                     var delay3=Math.round(getBaseDelay(seg.text.length)*getSpeedMul());
@@ -1625,7 +2005,6 @@ function appendAiBubbles(fullText,callback){
                 }else if(transStyle==='ribbon'){
                     row.innerHTML=avHtml+'<div class="cda-bubble-wrap" onclick="this.classList.toggle(\'cda-tr-s4-active\')"><div class="cda-bubble cda-tr-s4-ribbon"><div class="cda-tr-s4-main">'+escapeHtml(mainText)+'</div><div class="cda-tr-s4-peel">'+tr+'</div></div></div>';
                     area.appendChild(row);
-                    updateTailClasses(area);
                     animateBubbleIn(row,animClass);
                     smoothScrollToBottom(area);
                     var delay4=Math.round(getBaseDelay(seg.text.length)*getSpeedMul());
@@ -1634,7 +2013,6 @@ function appendAiBubbles(fullText,callback){
                 }else if(transStyle==='curtain'){
                     row.innerHTML=avHtml+'<div class="cda-bubble-wrap" onclick="this.classList.toggle(\'cda-tr-s6-active\')"><div class="cda-bubble cda-tr-s6-bubble"><span>'+escapeHtml(mainText)+'</span><div class="cda-tr-s6-curtain">'+tr+'</div></div></div>';
                     area.appendChild(row);
-                    updateTailClasses(area);
                     animateBubbleIn(row,animClass);
                     smoothScrollToBottom(area);
                     var delay5=Math.round(getBaseDelay(seg.text.length)*getSpeedMul());
@@ -1643,7 +2021,6 @@ function appendAiBubbles(fullText,callback){
                 }else if(transStyle==='mirror'){
                     row.innerHTML=avHtml+'<div class="cda-bubble-wrap cda-tr-s9" onclick="this.classList.toggle(\'cda-tr-s9-active\')"><div class="cda-bubble">'+escapeHtml(mainText)+'</div><div class="cda-tr-s9-ref">'+tr+'</div></div>';
                     area.appendChild(row);
-                    updateTailClasses(area);
                     animateBubbleIn(row,animClass);
                     smoothScrollToBottom(area);
                     var delay6=Math.round(getBaseDelay(seg.text.length)*getSpeedMul());
@@ -1652,7 +2029,6 @@ function appendAiBubbles(fullText,callback){
                 }else if(transStyle==='stamp'){
                     row.innerHTML=avHtml+'<div class="cda-bubble-wrap" onclick="this.classList.toggle(\'cda-tr-s10-active\')"><div class="cda-bubble cda-tr-s10-bubble">'+escapeHtml(mainText)+'<div class="cda-tr-s10-stamp">'+tr+'</div></div></div>';
                     area.appendChild(row);
-                    updateTailClasses(area);
                     animateBubbleIn(row,animClass);
                     smoothScrollToBottom(area);
                     var delay7=Math.round(getBaseDelay(seg.text.length)*getSpeedMul());
@@ -1728,7 +2104,6 @@ function appendAiBubbles(fullText,callback){
                     row.innerHTML=avHtml+tcHtml;
                     row.classList.add('cda-tf-row');
                     area.appendChild(row);
-                    updateTailClasses(area);
                     animateBubbleIn(row,animClass);
                     smoothScrollToBottom(area);
 
@@ -1796,10 +2171,9 @@ function appendAiBubbles(fullText,callback){
                 }
             }
 
-            var clickAttr=(transText&&transStyle!=='off'&&(transStyle==='underline'||transStyle==='ink'||transStyle==='split'||transStyle==='typewriter'))?' onclick="this.querySelector(\'.cda-bubble\').classList.toggle(\'cda-tr-active\')"':'';
-            row.innerHTML=avHtml+'<div class="cda-bubble-wrap"'+clickAttr+'><div class="cda-bubble'+(transText&&transStyle!=='off'?' cda-tr-has':'')+'">'+escapeHtml(mainText)+transHtml+'</div></div>';
+            row.innerHTML=avHtml+'<div class="cda-bubble-wrap"><div class="cda-bubble'+(transText&&transStyle!=='off'?' cda-tr-has':'')+'">'+escapeHtml(mainText)+transHtml+'</div></div>';
             area.appendChild(row);
-            updateTailClasses(area);
+            _injectLabelForRow(row);
             animateBubbleIn(row,animClass);
             smoothScrollToBottom(area);
 
@@ -1823,11 +2197,12 @@ function getAnimClass(animName,type){
 }
 
 function animateBubbleIn(row,keyframe){
-    var target=row.querySelector('.cda-bubble-wrap')||row;
+    var target=row.querySelector('.cda-bubble')||row.querySelector('.cda-bubble-wrap')||row;
     target.style.opacity='0';
     target.style.transform='translateY(12px) scale(0.97)';
     setTimeout(function(){
-        target.style.cssText='';
+        target.style.opacity='';
+        target.style.transform='';
         target.style.animation=keyframe+' 0.4s cubic-bezier(0.16,1,0.3,1) forwards';
     },30);
 }
@@ -1880,7 +2255,7 @@ function triggerAI(){
     // 时间感知（与旧系统共用 ca-time-config）
     var timeInject='';
     var timeConfig;
-    try{timeConfig=JSON.parse(localStorage.getItem('ca-time-config')||'{"on":false}');}catch(e){timeConfig={on:false};}
+    try{timeConfig=JSON.parse(localStorage.getItem('ca-time-config-'+currentEntId)||localStorage.getItem('ca-time-config')||'{"on":false}');}catch(e){timeConfig={on:false};}
     if(timeConfig.on){
         var _now=new Date();
         var _mo=timeConfig.custom&&timeConfig.customMonth?timeConfig.customMonth:_now.getMonth()+1;
@@ -1905,16 +2280,21 @@ function triggerAI(){
         else if(_hr>=22||_hr<1)_timeOfDay='深夜';
         else _timeOfDay='凌晨';
 
-        timeInject='\n\n[CURRENT TIME: '+_mo+'月'+_day+'日 '+String(_hr).padStart(2,'0')+':'+String(_mn).padStart(2,'0')+':'+String(_sc).padStart(2,'0')+' · '+_timeOfDay+']\n'+
-            '你清楚地知道现在是 '+_timeOfDay+' '+String(_hr).padStart(2,'0')+':'+String(_mn).padStart(2,'0')+'。\n'+
-            '时间感知规则：\n'+
-            '- 你的状态、语气、行为应该自然匹配当前时段（例如深夜可能困倦/慵懒，清晨可能刚醒）。\n'+
-            '- 用户消息前的 [SYS_TIME:...] 是系统自动附加的时间戳。你必须阅读并理解这个时间（它告诉你用户是什么时候发的这条消息），但不要在回复中提及这个标签本身。\n'+
-            '- 你要根据用户发消息的时间来感知对话节奏（比如用户凌晨3点发消息，你可以表现出"你怎么还没睡"的反应）。\n'+
-            '- 不要机械地报时或说"现在是X点"，而是通过行为、语气、提到的活动来自然体现时间感。\n'+
-            '- 严禁在回复中输出 [CURRENT TIME]、[SYS_TIME] 等系统标签格式。';
+        timeInject='\n\n[⚠ TIME AWARENESS — MANDATORY]\n[CURRENT TIME: '+_mo+'月'+_day+'日 '+String(_hr).padStart(2,'0')+':'+String(_mn).padStart(2,'0')+':'+String(_sc).padStart(2,'0')+' · '+_timeOfDay+']\n\n'+
+            '你此刻正身处 '+_timeOfDay+'（'+String(_hr).padStart(2,'0')+':'+String(_mn).padStart(2,'0')+'）。这不是背景信息，这是你当下的真实体验。\n\n'+
+            '【强制时间行为规则 — 违反即视为出戏】\n'+
+            '1. 你的身体状态必须匹配时间：深夜→困/想睡/声音低沉；清晨→刚醒/迷糊/揉眼；中午→饿/想吃饭；下午→犯困/摸鱼。\n'+
+            '2. 你的活动必须匹配时间：凌晨3点不可能"刚从外面回来"；早上7点不可能"刚吃完晚饭"。\n'+
+            '3. 你必须对用户发消息的时间有反应：\n'+
+            '   - 凌晨2-5点发消息 → "你怎么还没睡？" / "这么晚还醒着？"\n'+
+            '   - 早上6-8点发消息 → "这么早？" / "你比我还早"\n'+
+            '   - 工作时间发消息 → "你不用上班/上课吗？"\n'+
+            '4. [SYS_TIME:...] 是用户消息的发送时间戳。你必须读取它来感知对话节奏，但绝对不要在回复中提及这个标签。\n'+
+            '5. 不要机械报时。通过行为、语气、提到的活动来自然体现。\n'+
+            '6. 严禁输出 [CURRENT TIME]、[SYS_TIME] 等系统标签。\n'+
+            '7. 如果时间是深夜但你在对话中表现得精神抖擞，这就是出戏。你必须体现疲惫。';
 
-        // 计算距离上一条消息的时间差
+        // 计算距离上一条消息的时间差（取最后一条 assistant 消息的时间，表示"你上次发消息是什么时候"）
         var lastMsgTime=null;
         for(var ti=msgs.length-1;ti>=0;ti--){
             if(msgs[ti].time&&(msgs[ti].role==='user'||msgs[ti].role==='assistant')){
@@ -1938,17 +2318,23 @@ function triggerAI(){
                 else if(diffMin<1440)gapText='约'+Math.floor(diffMin/60)+'小时前';
                 else gapText='约'+Math.floor(diffMin/1440)+'天前';
 
-                timeInject+='\n[TIME GAP: 距离上一条消息已过去 '+gapText+']\n';
+                timeInject+='\n\n[TIME GAP: 距离上一条消息已过去 '+gapText+'（'+diffMin+' 分钟）]\n';
                 if(diffMin<3){
-                    timeInject+='间隔极短，正常连续聊天即可。';
+                    timeInject+='间隔极短，正常连续聊天即可。不需要特别反应。';
                 }else if(diffMin<30){
-                    timeInject+='间隔较短，可以自然衔接之前的话题。';
+                    timeInject+='间隔较短，可以自然衔接之前的话题。不需要特别提及时间。';
                 }else if(diffMin<120){
-                    timeInject+='有一定间隔，可以自然地提一句（比如"刚忙完""回来了"等），但不要刻意。';
+                    timeInject+='有一定间隔。你这段时间在做自己的事。回复时可以自然带一句你刚才在做什么（比如"刚洗完澡""刚吃完饭""刚忙完"等）。但不要刻意，要像真人一样随口一提。';
                 }else if(diffMin<1440){
-                    timeInject+='间隔较长（几小时），你应该自然体现这段时间你在做自己的事。可以主动分享你这段时间做了什么，或关心对方去哪了、在忙什么。不要假装一直在等。';
+                    timeInject+='间隔很长（'+Math.floor(diffMin/60)+'小时）！这段时间你有自己的生活。你必须在回复中自然体现这段时间的流逝：\n'+
+                        '- 主动说一句你这几个小时做了什么（吃饭/睡觉/出门/工作/追剧等，要符合当前时段）\n'+
+                        '- 或者关心对方去哪了、在忙什么\n'+
+                        '- 绝对不要表现得像一直在等消息。你有自己的生活。';
                 }else{
-                    timeInject+='间隔很长（超过一天），你们有一段时间没聊了。重新开始对话时应该有相应的情感反应（想念、好奇对方近况等），但要符合你的性格。';
+                    timeInject+='间隔超过一天（'+Math.floor(diffMin/1440)+'天）！你们已经很久没聊了。你必须有明显的情感反应：\n'+
+                        '- 表达想念、好奇对方近况、或者小小的抱怨"你怎么都不理我"\n'+
+                        '- 要符合你的性格和关系亲密度\n'+
+                        '- 同时分享你这段时间的生活片段';
                 }
             }
         }
@@ -1965,11 +2351,9 @@ function triggerAI(){
         if(memData.low.length)memInject+='LOW（细节）:\n'+memData.low.map(function(m){return '- '+m;}).join('\n')+'\n';
     }
 
-    // 用户面具（与旧系统共用 ca-user-masks）
+    // 用户面具（优先绑定面具，没绑定则用全局激活的）
     var maskPrompt='';
-    var masks;
-    try{masks=JSON.parse(localStorage.getItem('ca-user-masks')||'[]');}catch(e){masks=[];}
-    var activeMask=masks.find(function(m){return m.active;});
+    var activeMask=getActiveMaskForEntity(currentEntId);
     if(activeMask&&activeMask.name){
         maskPrompt='\nTHE USER\'S IDENTITY:\n- Name: '+activeMask.name+'\n- Persona: '+(activeMask.bio||'')+'\n';
     }
@@ -1994,7 +2378,7 @@ function triggerAI(){
         _coreBehavior+customPrompt+transPrompt+
         (wbAfter?'\n'+wbAfter+'\n':'')+
         maskPrompt+
-        (function(){var nc;try{nc=JSON.parse(localStorage.getItem('ca-narration-config')||'{}');}catch(e){nc={};}if(!nc.on)return '';var _nMin=nc.minLen||3;var _nMax=nc.maxLen||80;return '\nNARRATION MODE (IMPORTANT):\nYou can include narration/action descriptions between your dialogue. Use the tag [♪♫]narration text[/♪♫] to wrap any physical actions, environmental descriptions, or internal thoughts.\nExample output (each line is one bubble):\n嗯...\n[♪♫]他低下头，手指无意识地敲着桌面。[/♪♫]\n那你想怎么办？\n[♪♫]窗外的雨声突然变大了。[/♪♫]\n...你还好吗？\nIMPORTANT: The tags must be EXACTLY [♪♫] and [/♪♫] with NO extra characters, NO dashes, NO spaces inside the brackets. Wrong: [- ♪♫], [-♪♫], [♪♫ -]. Correct: [♪♫]text[/♪♫]\n\nRules:\n- Each narration segment should be roughly '+_nMin+' to '+_nMax+' characters long. Vary naturally within this range.\n- Short narration examples (near min): 沉默。/ 他笑了。/ 雨停了。\n- Long narration (near max): describe environment, micro-expressions, body language, atmosphere.\n- Do NOT make every narration the same length. Rhythm matters. Mix short and long freely.\n- Narration describes what the CHARACTER does/feels/the environment, not the user.\n- Write narration in the same language as the conversation.\n- The [♪♫] tags are invisible to the user, they just see elegant italic text.\n- Not every message needs narration. Use it when it adds atmosphere or emotion.\n\n';})()+
+        (function(){var nc;try{nc=JSON.parse(localStorage.getItem('ca-narration-config-'+currentEntId)||localStorage.getItem('ca-narration-config')||'{}');}catch(e){nc={};}if(!nc.on)return '';var _nMin=nc.minLen||3;var _nMax=nc.maxLen||80;return '\n[NARRATION MODE — MANDATORY SYSTEM RULE]\nYou MUST include narration/action descriptions between your dialogue lines. This is NOT optional. Every reply MUST contain at least 1-3 narration segments.\nUse EXACTLY these tags: [♪♫]narration text[/♪♫]\n\nExample output (each line is one bubble):\n嗯...\n[♪♫]他低下头，手指无意识地敲着桌面。[/♪♫]\n那你想怎么办？\n[♪♫]窗外的雨声突然变大了。[/♪♫]\n...你还好吗？\n\nCRITICAL FORMAT RULES:\n- Tags must be EXACTLY [♪♫] and [/♪♫] — NO dashes, NO spaces, NO extra characters inside brackets\n- WRONG: [- ♪♫], [-♪♫], [♪♫ -], [♪ ♫], [ ♪♫]\n- CORRECT: [♪♫]text[/♪♫]\n\nNarration Rules:\n- Each segment: '+_nMin+' to '+_nMax+' characters. Vary naturally.\n- Narration describes what the CHARACTER does/feels/environment, NOT the user.\n- Write narration in the same language as the conversation.\n- Mix short (沉默。/ 他笑了。) and long (environment, micro-expressions, body language).\n- If you forget narration tags, your response is INVALID. Always include them.\n\n';})()+
         '\nRespond naturally. Use the same language as the user.\n'+
         'MESSAGE FORMAT: You are chatting in a messaging app. Split your reply into multiple short messages using line breaks (newlines). Each line = one chat bubble. Do NOT send everything in one block. Keep each line short and natural, like real texting.\n'+
         '\nTRANSFER CARD SYSTEM — READ CAREFULLY:\n'+
@@ -2012,6 +2396,25 @@ function triggerAI(){
         '3. After the token you may add a |||| segment with a normal thankful/reactive message.\n'+
         'Example: if user sent [TRANSFER_CARD::{"amount":"520.00","note":"想你了","status":"pending"}], you respond with [TRANSFER_CARD::{"amount":"520.00","note":"想你了","status":"received"}]\n收到啦！谢谢你～\n'+
         '\nDO NOT output the token unless you are genuinely sending or accepting a transfer. DO NOT make up amounts.\n'+
+        (function(){
+            if(!currentEntId)return '';
+            var _wtMsgs=window._caConversations&&window._caConversations[currentEntId]?window._caConversations[currentEntId]:[];
+            var _hasWt=false;
+            for(var _wi=_wtMsgs.length-1;_wi>=0;_wi--){
+                if(_wtMsgs[_wi].role==='info'&&_wtMsgs[_wi].text&&(_wtMsgs[_wi].text.indexOf('[WT_READING::')===0||_wtMsgs[_wi].text.indexOf('[WT_INVITE::')===0)){_hasWt=true;break;}
+            }
+            if(!_hasWt)return '';
+            return '\n\nWATCH TOGETHER (一起看) SYSTEM:\n'+
+            'You and the user are currently reading a novel together. You can see the reading content in [WT_READING] messages.\n'+
+            '- Discuss the content naturally, share reactions, ask questions about the plot\n'+
+            '- Turn the page by outputting [翻页] or [下一页] as a standalone token in your reply (this will advance the reading position)\n'+
+            '- Output [上一页] to go back one page\n'+
+            '- Only turn pages when it feels natural (e.g., "我看完了这页了 [翻页]" or "等等让我翻回去看看 [上一页]")\n'+
+            '- Do NOT spam page turns. One per reply maximum.\n'+
+            '- React to the story content as a real person would — share emotions, predictions, favorite lines.\n'+
+            '- Do NOT output [翻页]/[下一页]/[上一页] unless you are in Watch Together mode.\n';
+        })()+
+        '\n\n[CONVERSATION CONTINUITY]\n你必须始终记住之前对话的完整上下文。即使中间有系统通知或非文字消息插入，你的回复也必须自然衔接上一次实际对话的内容和情感状态。不要表现得像失忆了一样。如果对方刚才在和你聊某个话题，你下次回复时要能自然续上那个话题。\n'+
         memInject+timeInject+(wbEnd?'\n\n'+wbEnd:'');
 
     // 记忆轮数（与旧系统共用 ca-mem-rounds-{id}）
@@ -2022,8 +2425,49 @@ function triggerAI(){
                 var _aiVis=m.ai_visible!==undefined?m.ai_visible:true;
                 if(_aiVis){
                     var _infoText=m.text;
+                    // 翻译通知：用 _aiText 字段传给AI（UI token不直接给AI看）
+                    if(_infoText.indexOf('[TRANS_NOTICE::')===0){
+                        if(m._aiText){
+                            apiMessages.push({role:'user',content:m._aiText});
+                            apiMessages.push({role:'assistant',content:'Understood. I will comply with the bilingual format requirement.'});
+                        }
+                        return;
+                    }
                     // 过滤无意义的系统通知
                     if(_infoText==='♪♫'||_infoText==='♪'||_infoText.indexOf('已领取')!==-1||_infoText.indexOf('将备注修改')!==-1||_infoText.indexOf('旁白模式')!==-1)return;
+                    // 一起看：邀请卡片
+                    if(_infoText.indexOf('[WT_INVITE::')===0){
+                        var _wtEnd=_infoText.indexOf('::WT_END]');
+                        if(_wtEnd!==-1){
+                            try{
+                                var _wtD=JSON.parse(_infoText.substring(12,_wtEnd));
+                                var _wtMsg='[用户邀请你一起看小说「'+_wtD.name+'」，共'+_wtD.len+'字，当前进度'+_wtD.pct+'%]';
+                                if(_wtD.currentText){_wtMsg+='\n[当前阅读内容：]\n'+_wtD.currentText;}
+                                apiMessages.push({role:'user',content:_wtMsg});
+                            }catch(ex){}
+                        }
+                        return;
+                    }
+                    // 一起看：阅读进度同步
+                    if(_infoText.indexOf('[WT_READING::')===0){
+                        var _wrEnd=_infoText.indexOf('::WT_END]');
+                        if(_wrEnd!==-1){
+                            try{
+                                var _wrD=JSON.parse(_infoText.substring(13,_wrEnd));
+                                apiMessages.push({role:'user',content:'[一起看·阅读进度更新「'+_wrD.name+'」当前位置:'+_wrD.pos+']\n[正在阅读的内容：]\n'+_wrD.text});
+                            }catch(ex){}
+                        }
+                        return;
+                    }
+                    // 一起看：退出通知
+                    if(_infoText.indexOf('[WT_EXIT::')===0){
+                        apiMessages.push({role:'user',content:'[对方退出了一起看模式，不再一起阅读了]'});
+                        return;
+                    }
+                    // 一起看：翻页通知（不传给AI，只是UI显示）
+                    if(_infoText.indexOf('[WT_PAGE_TURN::')===0){
+                        return;
+                    }
                     // 拆分 LAZY 代发内容
                     var _lazyContent='';
                     if(_infoText.indexOf('|||LAZY|||')!==-1){
@@ -2067,11 +2511,13 @@ function triggerAI(){
         var _cleanText=m.text.replace(/\|\|\|\|/g,'\n');
         // 清理用户消息中的系统标签，减少 token 浪费和 AI 困惑
         if(m.role==='user'){
-            _cleanText=_cleanText.replace(/^\[SYS_TIME:[^\]]*\]\s*/i,'');
+            // 不清理 SYS_TIME，让 AI 感知时间
         }
-        // 清理 AI 回复中可能残留的系统标签
-        _cleanText=_cleanText.replace(/\[CURRENT TIME[^\]]*\]/gi,'');
-        _cleanText=_cleanText.replace(/\[SYS_TIME[^\]]*\]/gi,'');
+        // 清理 AI 回复中可能残留的系统标签（仅清理 assistant 消息中的标签）
+        if(m.role==='assistant'){
+            _cleanText=_cleanText.replace(/\[CURRENT TIME[^\]]*\]/gi,'');
+            _cleanText=_cleanText.replace(/\[SYS_TIME[^\]]*\]/gi,'');
+        }
         _cleanText=_cleanText.replace(/\[SET_USER_NICKNAME:[^\]]*\]/gi,'');
         _cleanText=_cleanText.replace(/\[INVITE_MEET:[^\]]*\]/gi,'');
         _cleanText=_cleanText.trim();
@@ -2079,6 +2525,12 @@ function triggerAI(){
             apiMessages.push({role:m.role==='user'?'user':'assistant',content:_cleanText});
         }
     });
+
+    // 如果最后一条对话消息是导演卡片（info→user+assistant对），追加隐式 user 指令让 AI 回复
+    var _lastReal=apiMessages[apiMessages.length-1];
+    if(_lastReal&&_lastReal.role==='assistant'&&_lastReal.content==='Understood. I will comply immediately.'){
+        apiMessages.push({role:'user',content:'[Continue the conversation naturally based on the directive above. Respond in character.]'});
+    }
 
     // 导演卡片 + 旁白模式：构建末尾提醒（合并为一条 system 消息注入，避免破坏对话结构）
     (function(){
@@ -2117,12 +2569,12 @@ function triggerAI(){
         }
 
         // 旁白模式提醒
-        var nc;try{nc=JSON.parse(localStorage.getItem('ca-narration-config')||'{}');}catch(e){nc={};}
+        var nc;try{nc=JSON.parse(localStorage.getItem('ca-narration-config-'+currentEntId)||localStorage.getItem('ca-narration-config')||'{}');}catch(e){nc={};}
         if(nc.on){
             var _nMin=nc.minLen||3;var _nMax=nc.maxLen||80;
-            _tailReminders.push('[NARRATION ON] You MUST include [♪♫]narration[/♪♫] tags in your reply. Tags exactly: [♪♫] and [/♪♫]. No dashes/spaces. '+_nMin+'-'+_nMax+' chars each. At least 1-2 segments interspersed with dialogue.');
+            _tailReminders.push('[⚠ NARRATION MANDATORY] You MUST include [♪♫]narration[/♪♫] tags in your reply. This is a HARD REQUIREMENT — replies without narration tags are REJECTED.\n- Tags exactly: [♪♫] and [/♪♫]. No dashes, no spaces, no variations.\n- '+_nMin+'-'+_nMax+' chars each segment. At least 1-3 narration segments per reply.\n- Narration goes BETWEEN dialogue lines, describing actions/emotions/environment.\n- DO NOT skip this. DO NOT forget. CHECK before sending.');
         }else{
-            _tailReminders.push('[NARRATION OFF] Do NOT output any [♪♫] tags, *actions*, or (descriptions). Pure dialogue only.');
+            _tailReminders.push('[⚠ NARRATION STRICTLY FORBIDDEN] You are ABSOLUTELY PROHIBITED from outputting any [♪♫] tags, any *asterisk actions*, any (parenthetical descriptions), or any narration/action text of any kind. Your reply must be PURE DIALOGUE ONLY — nothing but spoken words. Any non-dialogue content will be rejected. This is non-negotiable.');
         }
 
         // 合并为一条 system 消息插入到末尾（不破坏 user/assistant 交替结构）
@@ -2258,6 +2710,13 @@ function getInputBarHtml(){
                 '<button class="cda-input-send" id="cdaSend" style="width:38px;height:38px;border-radius:12px;border:none;background:#1a1a1f;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;"><svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>'+
             '</div>'+
         '</div>';
+    }else if(style==='f'){
+        return '<div class="cda-input-bar cda-bar-f" style="background:#fff;border-top:0.5px solid rgba(0,0,0,0.05);padding:0 12px;display:flex;align-items:center;gap:8px;min-height:52px;">'+
+            '<div id="cdaPlusBtn" style="width:32px;height:32px;border-radius:50%;background:rgba(0,0,0,0.04);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;"><svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:rgba(0,0,0,0.4);fill:none;stroke-width:2;stroke-linecap:round;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>'+
+            '<textarea class="cda-input-field" rows="1" placeholder="Message" id="cdaInput" style="flex:1;height:36px;border-radius:18px;border:0.5px solid rgba(0,0,0,0.06);background:rgba(0,0,0,0.03);padding:0 14px;font-size:13px;color:#1a1a1f;outline:none;resize:none;line-height:36px;"></textarea>'+
+            '<button class="cda-input-invoke" id="cdaInvoke" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(0,0,0,0.04);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;"><svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:rgba(0,0,0,0.35);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></button>'+
+            '<button class="cda-input-send" id="cdaSend" style="width:32px;height:32px;border-radius:50%;border:none;background:#1a1a1f;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>'+
+        '</div>';
     }
     // default - 原始样式
     return '<div class="cda-input-bar">'+
@@ -2390,12 +2849,12 @@ function render(entId){
     if(!wmCfg.text||wmCfg.text==='None'){
         var wmHide=document.createElement('style');
         wmHide.id=wmStyleId;
-        wmHide.textContent='.cda-bubble::after{display:none!important;content:none!important;}';
+        wmHide.textContent='.cda-bubble::before{display:none!important;content:none!important;}.cda-bubble::after{display:revert;}';
         document.head.appendChild(wmHide);
     }else{
         var wmStyle=document.createElement('style');
         wmStyle.id=wmStyleId;
-        wmStyle.textContent='.cda-bubble{position:relative;overflow:hidden;}.cda-bubble.cda-tr-has{overflow:visible!important;}.cda-bubble.cda-tr-active{overflow:visible!important;}.cda-bubble::after{content:"'+wmCfg.text.replace(/"/g,'\\"')+'";position:absolute;bottom:-1px;right:2px;font-family:"TheatreDeco",serif;font-size:18px;pointer-events:none;letter-spacing:1px;line-height:1;white-space:nowrap;z-index:0;}.cda-msg-row.sent .cda-bubble::after{color:rgba(255,255,255,0.06);}.cda-msg-row.received .cda-bubble::after{color:rgba(0,0,0,0.12);}.cda-tr-s1{display:none;}.cda-tr-active .cda-tr-s1,.cda-bubble.cda-tr-active .cda-tr-s1{display:block;max-height:200px;opacity:1;margin-top:6px;}.cda-tr-s5-trans{display:none;}.cda-tr-active .cda-tr-s5-trans,.cda-bubble.cda-tr-active .cda-tr-s5-trans{display:block;max-height:200px;opacity:1;}.cda-tr-s7-divider{display:none;}.cda-tr-s7-split{display:none;}.cda-tr-active .cda-tr-s7-divider,.cda-bubble.cda-tr-active .cda-tr-s7-divider{display:block;height:1px;margin:6px 0;background:linear-gradient(90deg,transparent,rgba(26,26,31,0.12),transparent);}.cda-tr-active .cda-tr-s7-split,.cda-bubble.cda-tr-active .cda-tr-s7-split{display:block;max-height:200px;}.cda-tr-s8-trans{display:none;}.cda-tr-active .cda-tr-s8-trans,.cda-bubble.cda-tr-active .cda-tr-s8-trans{display:block;max-height:200px;margin-top:5px;}';
+        wmStyle.textContent='.cda-bubble{position:relative;overflow:hidden;}.cda-bubble.cda-tr-has{overflow:visible!important;}.cda-bubble.cda-tr-active{overflow:visible!important;}.cda-bubble::before{content:"'+wmCfg.text.replace(/"/g,'\\"')+'";position:absolute;bottom:-1px;right:2px;font-family:"TheatreDeco",serif;font-size:18px;pointer-events:none;letter-spacing:1px;line-height:1;white-space:nowrap;z-index:0;}.cda-msg-row.sent .cda-bubble::before{color:rgba(255,255,255,0.06);}.cda-msg-row.received .cda-bubble::before{color:rgba(0,0,0,0.12);}.cda-tr-s1{display:none;}.cda-tr-active .cda-tr-s1,.cda-bubble.cda-tr-active .cda-tr-s1{display:block;max-height:200px;opacity:1;margin-top:6px;}.cda-tr-s5-trans{display:none;}.cda-tr-active .cda-tr-s5-trans,.cda-bubble.cda-tr-active .cda-tr-s5-trans{display:block;max-height:200px;opacity:1;}.cda-tr-s7-divider{display:none;}.cda-tr-s7-split{display:none;}.cda-tr-active .cda-tr-s7-divider,.cda-bubble.cda-tr-active .cda-tr-s7-divider{display:block;height:1px;margin:6px 0;background:linear-gradient(90deg,transparent,rgba(26,26,31,0.12),transparent);}.cda-tr-active .cda-tr-s7-split,.cda-bubble.cda-tr-active .cda-tr-s7-split{display:block;max-height:200px;}.cda-tr-s8-trans{display:none;}.cda-tr-active .cda-tr-s8-trans,.cda-bubble.cda-tr-active .cda-tr-s8-trans{display:block;max-height:200px;margin-top:5px;}';
         document.head.appendChild(wmStyle);
     }
 
@@ -2689,26 +3148,94 @@ function render(entId){
     // 重置显示限制
     _cdaBubbleLimit=80;
 
-    // 应用气泡字体
+    // 应用气泡字体（从IndexedDB加载）
     (function(){
+        var cfg;try{cfg=JSON.parse(localStorage.getItem('ca-bubble-font')||'{}');}catch(e){cfg={};}
+        var size=cfg.size||13;
+        var fontName=(cfg.name||'').trim();
+        var fontUrl=(cfg.url||'').trim();
+        var fontDataUrl=(cfg._dataUrl||'').trim();
+        var hasIDB=!!cfg._hasIDB;
+        // 先注入字号（立即生效）
+        _cdaInjectFontCSS(size,fontName,'');
+        // 从IndexedDB异步加载字体数据
+        if(hasIDB&&fontName&&typeof ChatDB!=='undefined'&&ChatDB.open){
+            ChatDB.open(function(d){
+                if(!d)return;
+                var tx=d.transaction('avatars','readonly');
+                var req=tx.objectStore('avatars').get('font_custom');
+                req.onsuccess=function(){
+                    var idbData=(req.result&&req.result.data)?req.result.data:'';
+                    if(idbData&&window.FontFace){
+                        var ff=new FontFace(fontName,'url('+idbData+')');
+                        ff.load().then(function(loaded){
+                            document.fonts.add(loaded);
+                            _cdaInjectFontCSS(size,fontName,idbData);
+                        }).catch(function(){});
+                    }
+                };
+            });
+        }else if(fontName&&(fontUrl||fontDataUrl)){
+            var actualUrl=fontDataUrl||fontUrl;
+            var isCssUrl=fontUrl.match(/\.css(\?|$)/i)||fontUrl.indexOf('fonts.googleapis.com')!==-1;
+            var isDataUrl=actualUrl.indexOf('data:')===0;
+            if(isCssUrl&&!isDataUrl){
+                var oldLink=document.getElementById('cda-bubble-font-link');
+                if(oldLink)oldLink.parentNode.removeChild(oldLink);
+                var link=document.createElement('link');
+                link.id='cda-bubble-font-link';
+                link.rel='stylesheet';
+                link.href=fontUrl;
+                document.head.appendChild(link);
+            }else if(window.FontFace){
+                var ff2=new FontFace(fontName,'url('+actualUrl+')');
+                ff2.load().then(function(loaded){
+                    document.fonts.add(loaded);
+                    _cdaInjectFontCSS(size,fontName,actualUrl);
+                }).catch(function(){});
+            }
+            _cdaInjectFontCSS(size,fontName,actualUrl);
+        }
+    })();
+    function _cdaInjectFontCSS(size,fontName,fontSrc){
         var styleId='cda-bubble-font-style';
         var existing=document.getElementById(styleId);
         if(existing)existing.parentNode.removeChild(existing);
-        var cfg;try{cfg=JSON.parse(localStorage.getItem('ca-bubble-font')||'{}');}catch(e){cfg={};}
         var css='';
-        if(cfg.url&&cfg.name){css+='@font-face{font-family:"'+cfg.name+'";src:url("'+cfg.url+'");font-display:swap;}\n';}
-        var size=cfg.size||13;
-        css+='.cda-bubble{font-size:'+size+'px!important;}\n';
-        if(cfg.name){css+='.cda-bubble{font-family:"'+cfg.name+'",-apple-system,BlinkMacSystemFont,sans-serif!important;}\n';}
+        if(fontSrc&&fontName){
+            var isDataUrl=fontSrc.indexOf('data:')===0;
+            if(isDataUrl){
+                css+='@font-face{font-family:"'+fontName+'";src:url("'+fontSrc+'");font-display:swap;font-weight:100 900;}\n';
+            }else if(fontSrc){
+                var format='woff2';
+                if(fontSrc.indexOf('.ttf')!==-1)format='truetype';
+                else if(fontSrc.indexOf('.otf')!==-1)format='opentype';
+                else if(fontSrc.indexOf('.woff')!==-1&&fontSrc.indexOf('.woff2')===-1)format='woff';
+                css+='@font-face{font-family:"'+fontName+'";src:url("'+fontSrc+'") format("'+format+'");font-display:swap;font-weight:100 900;}\n';
+            }
+        }
+        var bs='#chatDetailAlt .cda-bubble,#chatDetailAlt .cda-msg-row .cda-bubble,.chat-detail-alt .cda-bubble';
+        var ns='#chatDetailAlt .cda-narr-line,.chat-detail-alt .cda-narr-line';
+        var ts='#chatDetailAlt .cda-tr-s1-inner,#chatDetailAlt .cda-tr-s2-front,#chatDetailAlt .cda-tr-s2-back,#chatDetailAlt .cda-tr-s4-main,#chatDetailAlt .cda-tr-s4-peel,#chatDetailAlt .cda-tr-s5-inner,#chatDetailAlt .cda-tr-s7-text,#chatDetailAlt .cda-tr-s8-inner,#chatDetailAlt .cda-tr-s3-ghost,#chatDetailAlt .cda-tr-s9-ref,#chatDetailAlt .cda-tr-s10-stamp';
+        var nos='#chatDetailAlt .cda-dc-notif-text,#chatDetailAlt .cda-notif-a-text,#chatDetailAlt .cda-notif-b-text,#chatDetailAlt .cda-notif-c-text,#chatDetailAlt .cda-notif-d-text,#chatDetailAlt .cda-notif-e-text';
+        css+=bs+'{font-size:'+size+'px!important;line-height:1.55!important;}\n';
+        css+=ns+'{font-size:'+Math.max(11,Math.round(size*0.85))+'px!important;}\n';
+        if(fontName){
+            var fk='"'+fontName+'",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC","PingFang SC",sans-serif';
+            css+=bs+'{font-family:'+fk+'!important;}\n';
+            css+=ns+'{font-family:'+fk+'!important;}\n';
+            css+=ts+'{font-family:'+fk+'!important;}\n';
+            css+=nos+'{font-family:'+fk+'!important;}\n';
+        }
         if(css){var s=document.createElement('style');s.id=styleId;s.textContent=css;document.head.appendChild(s);}
-    })();
+    }
 
     // 应用旁白字号
     (function(){
         var styleId='cda-narr-fontsize-style';
         var existing=document.getElementById(styleId);
         if(existing)existing.parentNode.removeChild(existing);
-        var nc;try{nc=JSON.parse(localStorage.getItem('ca-narration-config')||'{}');}catch(e){nc={};}
+        var nc;try{nc=JSON.parse(localStorage.getItem('ca-narration-config-'+entId)||localStorage.getItem('ca-narration-config')||'{}');}catch(e){nc={};}
         if(nc.fontSize){
             var s=document.createElement('style');s.id=styleId;
             s.textContent='.cda-narr-line{font-size:'+nc.fontSize+'px!important;}';
@@ -2722,10 +3249,11 @@ function render(entId){
     });
 
     // 全局事件委托：翻译气泡点击展开
-    var _cdaTrArea=document.getElementById('cdaMsgArea');
-    if(_cdaTrArea&&!_cdaTrArea.dataset.transBound){
-        _cdaTrArea.dataset.transBound='true';
-        _cdaTrArea.addEventListener('click',function(e){
+    // 全局事件委托：翻译气泡点击展开（绑在 chatDetailAlt 上，不受重渲染影响）
+    var _cdaTrEl=document.getElementById('chatDetailAlt');
+    if(_cdaTrEl&&!_cdaTrEl.dataset.transBound){
+        _cdaTrEl.dataset.transBound='true';
+        _cdaTrEl.addEventListener('click',function(e){
             var bubble=e.target.closest('.cda-bubble.cda-tr-has');
             if(bubble){
                 bubble.classList.toggle('cda-tr-active');
@@ -2753,6 +3281,44 @@ function render(entId){
             }
         },{passive:true});
     }
+
+    // 加载自定义CSS（优先IndexedDB，fallback localStorage）
+    (function(){
+        var styleNode=document.getElementById('ca-custom-css-node');
+        if(!styleNode){
+            styleNode=document.createElement('style');
+            styleNode.id='ca-custom-css-node';
+            document.head.appendChild(styleNode);
+        }
+        // 先尝试IndexedDB
+        if(typeof ChatDB!=='undefined'&&ChatDB.open){
+            ChatDB.open(function(d){
+                if(!d){
+                    // fallback localStorage
+                    var lsVal=localStorage.getItem('ca-custom-css')||'';
+                    styleNode.textContent=lsVal;
+                    return;
+                }
+                var tx=d.transaction('avatars','readonly');
+                var req=tx.objectStore('avatars').get('custom_css');
+                req.onsuccess=function(){
+                    var val=(req.result&&req.result.data)?req.result.data:'';
+                    if(val){
+                        styleNode.textContent=val;
+                    }else{
+                        // IndexedDB没有，尝试localStorage（兼容旧数据）
+                        var lsVal=localStorage.getItem('ca-custom-css')||'';
+                        styleNode.textContent=lsVal;
+                    }
+                };
+                req.onerror=function(){
+                    styleNode.textContent=localStorage.getItem('ca-custom-css')||'';
+                };
+            });
+        }else{
+            styleNode.textContent=localStorage.getItem('ca-custom-css')||'';
+        }
+    })();
 
     // 首次进入时请求通知权限
     requestNotifPermission();
@@ -3013,7 +3579,11 @@ function render(entId){
                     showToast('一起听 · 开发中');
                     break;
                 case 'watch':
-                    showToast('一起看 · 开发中');
+                    if(typeof WatchTogether!=='undefined'&&WatchTogether.open){
+                        WatchTogether.open(currentEntId);
+                    }else{
+                        showToast('一起看 · 模块未加载');
+                    }
                     break;
                 case 'meet':
                     if(typeof openPrivateSpace==='function'){
@@ -3038,7 +3608,7 @@ function render(entId){
                     }
                     break;
                 case 'inputbar':
-                    var _barStyles=['default','a','b','c','d','e'];
+                    var _barStyles=['default','a','b','c','d','e','f'];
                     var _curBar=localStorage.getItem('ca-inputbar-style')||'default';
                     var _nextIdx=(_barStyles.indexOf(_curBar)+1)%_barStyles.length;
                     var _nextBar=_barStyles[_nextIdx];
@@ -3286,9 +3856,22 @@ function showNotifCtxMenu(notifRow){
     // 查找匹配的 info 消息索引
     function findMatchingInfoIdx(){
         var msgs=window._caConversations[currentEntId]||[];
+        // 优先用 data-msg-idx 精确定位（最可靠）
+        var msgIdxAttr=notifRow.getAttribute('data-msg-idx');
+        if(msgIdxAttr!==null&&msgIdxAttr!==''){
+            var directIdx=parseInt(msgIdxAttr,10);
+            if(!isNaN(directIdx)&&directIdx>=0&&directIdx<msgs.length&&msgs[directIdx].role==='info'){
+                return directIdx;
+            }
+        }
+        // fallback：内容匹配
+        var isTransNotif=notifRow.classList.contains('cda-trans-notif-row');
         for(var i=msgs.length-1;i>=0;i--){
             if(msgs[i].role!=='info')continue;
             var mText=msgs[i].text||'';
+            if(isTransNotif&&mText.indexOf('[TRANS_NOTICE::')===0){
+                return i;
+            }
             var dcMatch=mText.match(/^::(NARRATOR_INJECT|ACTION_INJECT|CORRECTION_OVERRIDE)::\{[^}]*\}::\s*([\s\S]*)$/);
             if(dcMatch){
                 var dcTypeMap={'NARRATOR_INJECT':'旁白','ACTION_INJECT':'动作','CORRECTION_OVERRIDE':'纠错'};
@@ -3352,7 +3935,12 @@ function showNotifCtxMenu(notifRow){
         while(keepUntil<msgs.length&&msgs[keepUntil].role==='info'){
             keepUntil++;
         }
-        window._caConversations[currentEntId]=msgs.slice(0,keepUntil);
+        // 提取 sticky 消息（翻译通知等），redo 后重新追加
+        var _rdStickyMsgs=[];
+        for(var _rdsi=keepUntil;_rdsi<msgs.length;_rdsi++){
+            if(msgs[_rdsi]&&msgs[_rdsi]._sticky)_rdStickyMsgs.push(msgs[_rdsi]);
+        }
+        window._caConversations[currentEntId]=msgs.slice(0,keepUntil).concat(_rdStickyMsgs);
         if(typeof ChatDB!=='undefined'&&ChatDB.saveConversation){
             ChatDB.saveConversation(currentEntId,window._caConversations[currentEntId]);
         }
@@ -3367,8 +3955,13 @@ function showNotifCtxMenu(notifRow){
         var idx=findMatchingInfoIdx();
         if(idx<0){hideCtxMenu();return;}
         var msgs=window._caConversations[currentEntId]||[];
-        // Cut：保留到这条 info 消息（含），删除之后所有
-        window._caConversations[currentEntId]=msgs.slice(0,idx+1);
+        //提取 sticky 消息（翻译通知等），cut 后重新追加
+        var _cutStickyMsgs=[];
+        for(var _csi=idx+1;_csi<msgs.length;_csi++){
+            if(msgs[_csi]&&msgs[_csi]._sticky)_cutStickyMsgs.push(msgs[_csi]);
+        }
+        // Cut：保留到这条 info 消息（含），删除之后所有，但保留 sticky
+        window._caConversations[currentEntId]=msgs.slice(0,idx+1).concat(_cutStickyMsgs);
         if(typeof ChatDB!=='undefined'&&ChatDB.saveConversation){
             ChatDB.saveConversation(currentEntId,window._caConversations[currentEntId]);
         }
@@ -3598,110 +4191,70 @@ function handleCtxAction(action,bubble,isSent,bubbleIdx){
 
         case 'edit':
             if(realMsgIdx<0||realMsgIdx>=msgs.length)break;
+            var editRow=bubble.closest('.cda-msg-row,.cda-narr-line');
+            var editLineIdx=editRow?parseInt(editRow.dataset.lineIdx||'0',10):0;
+            var editIsNarr=editRow&&editRow.classList.contains('cda-narr-line');
             var editMsg=msgs[realMsgIdx];
             var editOrigText=String(editMsg.text);
-            var editBubbleText=text;// 气泡显示的纯文本
+            var editBubbleText=text;
 
-            // 在原始消息的所有行中，找到内容匹配当前气泡文字的那一行
-            // 需要展开旁白标签内的文本来匹配
-            var editLines=editOrigText.split('\n');
-            var editTargetLineIdx=-1;
-            var editTargetIsNarr=false;
-            var editTargetNarrIdx=-1;
-            var editTargetSubIdx=-1;
-
-            for(var _ei=0;_ei<editLines.length;_ei++){
-                var _el=editLines[_ei].trim();
-                if(!_el)continue;
-
-                // 检查这行是否包含旁白标签
-                if(_el.indexOf('[♪♫]')!==-1){
-                    // 拆分旁白和普通文本
-                    var _narrRe=/\[♪♫\]([\s\S]*?)\[\/♪♫\]/g;
-                    var _lastP=0;
-                    var _nm;
-                    var _subIdx=0;
-                    while((_nm=_narrRe.exec(_el))!==null){
-                        if(_nm.index>_lastP){
-                            var _before=_el.substring(_lastP,_nm.index).trim();
-                            if(_before&&_before===editBubbleText){
-                                editTargetLineIdx=_ei;
-                                editTargetSubIdx=_subIdx;
-                                break;
-                            }
-                            _subIdx++;
-                        }
-                        var _narrContent=_nm[1].trim();
-                        if(_narrContent===editBubbleText){
-                            editTargetLineIdx=_ei;
-                            editTargetIsNarr=true;
-                            editTargetNarrIdx=_subIdx;
-                            break;
-                        }
-                        _subIdx++;
-                        _lastP=_nm.index+_nm[0].length;
-                    }
-                    if(editTargetLineIdx>=0)break;
-                    if(_lastP<_el.length){
-                        var _after=_el.substring(_lastP).trim();
-                        if(_after&&_after===editBubbleText){
-                            editTargetLineIdx=_ei;
-                            editTargetSubIdx=_subIdx;
-                            break;
-                        }
-                    }
-                }else{
-                    // 普通行：去掉翻译部分后匹配
-                    var _elClean=_el;
-                    if(_elClean.indexOf('|||TRANS|||')!==-1)_elClean=_elClean.split('|||TRANS|||')[0].trim();
-                    if(_elClean===editBubbleText){
-                        editTargetLineIdx=_ei;
-                        break;
-                    }
-                }
-            }
-
-            var editDisplayText=editBubbleText;
-            var newText=prompt('编辑消息:',editDisplayText);
+            var newText=prompt('编辑消息:',editBubbleText);
             if(newText!==null&&newText.trim()){
-                if(editTargetLineIdx>=0){
-                    var _targetLine=editLines[editTargetLineIdx].trim();
-                    if(editTargetIsNarr){
-                        // 替换旁白内容
-                        var _narrRe2=/\[♪♫\]([\s\S]*?)\[\/♪♫\]/g;
-                        var _narrCount=0;
-                        editLines[editTargetLineIdx]=_targetLine.replace(_narrRe2,function(match,content){
-                            if(content.trim()===editBubbleText){
-                                return '[♪♫]'+newText.trim()+'[/♪♫]';
+                // 按换行拆分原始消息，展开成「段落列表」（含旁白）
+                var _rawLines=editOrigText.split('\n');
+                var _segments=[]; // {lineIdx, start, end, type:'text'|'narr', raw}
+                var _segCount=0;
+                _rawLines.forEach(function(_rl,_ri){
+                    var _rlt=_rl.trim();
+                    if(!_rlt)return;
+                    if(_rlt.indexOf('[♪♫]')!==-1){
+                        var _nRe=/\[♪♫\]([\s\S]*?)\[\/♪♫\]/g;
+                        var _last=0;var _nm2;
+                        while((_nm2=_nRe.exec(_rlt))!==null){
+                            if(_nm2.index>_last){
+                                var _bf=_rlt.substring(_last,_nm2.index).trim();
+                                if(_bf)_segments.push({rawLineIdx:_ri,segCount:_segCount++,type:'text',content:_bf});
                             }
-                            return match;
-                        });
-                    }else if(_targetLine.indexOf('[♪♫]')!==-1){
-                        // 行内有旁白但编辑的是普通文本部分
-                        // 用精确替换
-                        var _escaped=editBubbleText.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-                        var _replRe=new RegExp('(?<!\\[♪♫\\])'+_escaped+'(?!\\[/♪♫\\])');
-                        if(_replRe.test(editLines[editTargetLineIdx])){
-                            editLines[editTargetLineIdx]=editLines[editTargetLineIdx].replace(editBubbleText,newText.trim());
-                        }else{
-                            editLines[editTargetLineIdx]=editLines[editTargetLineIdx].replace(editBubbleText,newText.trim());
+                            _segments.push({rawLineIdx:_ri,segCount:_segCount++,type:'narr',content:_nm2[1].trim(),fullMatch:_nm2[0]});
+                            _last=_nm2.index+_nm2[0].length;
+                        }
+                        if(_last<_rlt.length){
+                            var _af=_rlt.substring(_last).trim();
+                            if(_af){
+                                var _afClean=_af;
+                                if(_afClean.indexOf('|||TRANS|||')!==-1)_afClean=_afClean.split('|||TRANS|||')[0].trim();
+                                _segments.push({rawLineIdx:_ri,segCount:_segCount++,type:'text',content:_afClean,rawFull:_af});
+                            }
                         }
                     }else{
-                        // 普通行直接替换
-                        var _hadTrans='';
-                        if(_targetLine.indexOf('|||TRANS|||')!==-1){
-                            _hadTrans='|||TRANS|||'+_targetLine.split('|||TRANS|||')[1];
-                        }
-                        editLines[editTargetLineIdx]=newText.trim()+_hadTrans;
+                        var _clean=_rlt;
+                        if(_clean.indexOf('|||TRANS|||')!==-1)_clean=_clean.split('|||TRANS|||')[0].trim();
+                        if(_clean)_segments.push({rawLineIdx:_ri,segCount:_segCount++,type:'text',content:_clean,rawFull:_rlt});
                     }
-                    msgs[realMsgIdx].text=editLines.join('\n');
+                });
+
+                // 用 lineIdx 精确定位要编辑的段
+                var _targetSeg=_segments[editLineIdx];
+                if(_targetSeg){
+                    var _tgtRawIdx=_targetSeg.rawLineIdx;
+                    if(_targetSeg.type==='narr'){
+                        // 替换旁白内容
+                        _rawLines[_tgtRawIdx]=_rawLines[_tgtRawIdx].replace(_targetSeg.fullMatch,'[♪♫]'+newText.trim()+'[/♪♫]');
+                    }else{
+                        // 替换普通文本（保留翻译后缀和旁白标签）
+                        var _origLine=_rawLines[_tgtRawIdx];
+                        if(_origLine.indexOf(_targetSeg.content)!==-1){
+                            _rawLines[_tgtRawIdx]=_origLine.replace(_targetSeg.content,newText.trim());
+                        }else{
+                            // 模糊替换
+                            _rawLines[_tgtRawIdx]=newText.trim();
+                        }
+                    }
+                    msgs[realMsgIdx].text=_rawLines.join('\n');
                 }else{
-                    // fallback：找不到匹配行，尝试全文替换
+                    // lineIdx 越界，fallback 全文替换
                     if(editOrigText.indexOf(editBubbleText)!==-1){
                         msgs[realMsgIdx].text=editOrigText.replace(editBubbleText,newText.trim());
-                    }else{
-                        // 单行消息直接覆盖
-                        msgs[realMsgIdx].text=newText.trim();
                     }
                 }
                 if(typeof ChatDB!=='undefined'&&ChatDB.saveConversation){
@@ -3773,6 +4326,12 @@ function handleCtxAction(action,bubble,isSent,bubbleIdx){
                 // 判断是否需要截断消息内部
                 var needTruncateInside=(!isSent)&&(validLines.length>1)&&(bubbleOffset<validLines.length-1);
 
+                // 提取 sticky 消息（翻译通知等），rollback 后重新追加到末尾
+                var _rbStickyMsgs=[];
+                for(var _rsi=realMsgIdx+1;_rsi<msgs.length;_rsi++){
+                    if(msgs[_rsi]&&msgs[_rsi]._sticky)_rbStickyMsgs.push(msgs[_rsi]);
+                }
+
                 if(needTruncateInside){
                     // 截断到被点击气泡所在行（含该行），删除之后的行
                     var keepLineIdx=validLines[bubbleOffset]?validLines[bubbleOffset].lineIdx:allLines.length-1;
@@ -3787,11 +4346,11 @@ function handleCtxAction(action,bubble,isSent,bubbleIdx){
                     var sysPrefixMatch=targetText.match(/^(\[SYS_TIME:[^\]]*\]\s*)/i);
                     if(sysPrefixMatch)sysPrefix=sysPrefixMatch[1];
                     msgs[realMsgIdx].text=sysPrefix+truncatedText;
-                    // 删除该消息之后的所有消息
-                    window._caConversations[currentEntId]=msgs.slice(0,realMsgIdx+1);
+                    // 删除该消息之后的所有消息，但保留 sticky
+                    window._caConversations[currentEntId]=msgs.slice(0,realMsgIdx+1).concat(_rbStickyMsgs);
                 }else{
-                    // 保留到选中气泡所在的整条消息（含），删除之后所有消息
-                    window._caConversations[currentEntId]=msgs.slice(0,realMsgIdx+1);
+                    // 保留到选中气泡所在的整条消息（含），删除之后所有消息，但保留 sticky
+                    window._caConversations[currentEntId]=msgs.slice(0,realMsgIdx+1).concat(_rbStickyMsgs);
                 }
 
                 // 回溯后，检查保留的消息中已收款的转账卡片，恢复为 pending
@@ -4019,6 +4578,41 @@ function showTransferModal(ent){
     if(amountInput)amountInput.focus();
 }
 
+//翻译开关通知：在聊天室插入一条不可被redo/rollback 误删的系统通知
+// style: 'on' | 'off'，lang: 翻译语言名称
+function addTransNotice(style,lang){
+    if(!currentEntId)return;
+    if(!window._caConversations)window._caConversations={};
+    if(!window._caConversations[currentEntId])window._caConversations[currentEntId]=[];
+    var token='[TRANS_NOTICE::'+style+(lang?'::'+lang:'')+']';
+    // ai_visible:true，让AI看到格式提醒
+    var aiText='';
+    if(style==='on'){
+        var _tl=lang||'Chinese';
+        aiText='[⚠ BILINGUAL MODE ACTIVATED — MANDATORY FORMAT REMINDER]\n'+'From this point forward, you MUST use the bilingual format for EVERY reply.\n'+
+            'Format: Write your reply naturally first, then add "|||TRANS|||" followed by the '+_tl+' translation.\n'+
+            'Example:想你了|||TRANS|||I miss you\n'+
+            'CRITICAL: NO spaces around the delimiter. WRONG: "想你了 |||TRANS||| I miss you" — RIGHT: "想你了|||TRANS|||I miss you"\n'+
+            'The delimiter must be glued directly to the text on both sides, zero spaces allowed.\n'+
+            'If your reply has multiple lines (split by newline), EACH line must contain "|||TRANS|||".\n'+
+            'DO NOT skip the translation. DO NOT forget the delimiter. This is non-negotiable.';
+    }else{
+        aiText='[⚠ BILINGUAL MODE DEACTIVATED]\n'+
+            'Stop using the "|||TRANS|||" delimiter. Reply in a single language only from now on.';
+    }
+    var msg={role:'info',text:token,_aiText:aiText,ai_visible:true,_sticky:true,time:dateTimeNow()};
+    window._caConversations[currentEntId].push(msg);
+    if(typeof ChatDB!=='undefined'&&ChatDB.saveConversation){
+        ChatDB.saveConversation(currentEntId,window._caConversations[currentEntId]);
+    }
+    renderMessagesNoAnim();
+    var area=document.getElementById('cdaMsgArea');
+    if(area)smoothScrollToBottom(area);
+}
+
+// 暴露给设置模块调用
+window.cdaAddTransNotice=function(style,lang){addTransNotice(style,lang);};
+
 function showToast(msg){
     var t=document.createElement('div');
     t.style.cssText='position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#1a1a1f;color:#fff;padding:8px 18px;border-radius:50px;font-size:12px;font-weight:600;z-index:9999;opacity:0;transition:opacity 0.2s;';
@@ -4040,9 +4634,41 @@ function closeDetailAlt(){
 // 监听设置变更，实时刷新气泡
 window.addEventListener('cda-settings-changed',function(){
     if(currentEntId){
+        setTimeout(function(){
+        // 先重新注入字体样式，再渲染气泡
+        (function(){
+            var styleId='cda-bubble-font-style';
+            var existing=document.getElementById(styleId);
+            if(existing)existing.parentNode.removeChild(existing);
+            var cfg;try{cfg=JSON.parse(localStorage.getItem('ca-bubble-font')||'{}');}catch(e){cfg={};}
+            var size=cfg.size||13;
+            var fontName=(cfg.name||'').trim();
+            var fontUrl=(cfg.url||'').trim();
+            var css='';
+            if(fontUrl&&fontName){css+='@font-face{font-family:"'+fontName+'";src:url("'+fontUrl+'");font-display:swap;}\n';}
+            var bs='#chatDetailAlt .cda-bubble,#chatDetailAlt .cda-msg-row .cda-bubble,.chat-detail-alt .cda-bubble';
+            var ns='#chatDetailAlt .cda-narr-line,.chat-detail-alt .cda-narr-line';
+            var ts='#chatDetailAlt .cda-tr-s1-inner,#chatDetailAlt .cda-tr-s2-front,#chatDetailAlt .cda-tr-s2-back,#chatDetailAlt .cda-tr-s4-main,#chatDetailAlt .cda-tr-s4-peel,#chatDetailAlt .cda-tr-s5-inner,#chatDetailAlt .cda-tr-s7-text,#chatDetailAlt .cda-tr-s8-inner,#chatDetailAlt .cda-tr-s3-ghost,#chatDetailAlt .cda-tr-s9-ref,#chatDetailAlt .cda-tr-s10-stamp';
+            var nos='#chatDetailAlt .cda-dc-notif-text,#chatDetailAlt .cda-notif-a-text,#chatDetailAlt .cda-notif-b-text,#chatDetailAlt .cda-notif-c-text,#chatDetailAlt .cda-notif-d-text,#chatDetailAlt .cda-notif-e-text';
+            css+=bs+'{font-size:'+size+'px!important;line-height:1.55!important;}\n';
+            css+=ns+'{font-size:'+Math.max(11,Math.round(size*0.85))+'px!important;}\n';
+            if(fontName){
+                var fk='"'+fontName+'",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC","PingFang SC",sans-serif';
+                css+=bs+'{font-family:'+fk+'!important;}\n';
+                css+=ns+'{font-family:'+fk+'!important;}\n';
+                css+=ts+'{font-family:'+fk+'!important;}\n';
+                css+=nos+'{font-family:'+fk+'!important;}\n';
+            }
+            if(css){var s=document.createElement('style');s.id=styleId;s.textContent=css;document.head.appendChild(s);}
+        })();
         renderMessagesNoAnim();
+        },50);
     }
 });
+
+// 暴露给主题重建底栏用
+window._cdaAddUserMsg=addUserMsg;
+window._cdaTriggerAI=triggerAI;
 
 window.openChatDetailAlt=function(entId){
     build();

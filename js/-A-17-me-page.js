@@ -16,7 +16,7 @@ function getMasks(){
 function saveMasks(masks){
     // 头像单独存 IndexedDB，localStorage 只存文字数据
     var slim=masks.map(function(m){
-        var s={id:m.id,name:m.name,bio:m.bio,active:m.active};
+        var s={id:m.id,name:m.name,bio:m.bio,active:m.active,boundEntities:m.boundEntities||[]};
         if(m.avatar&&typeof ChatDB!=='undefined'){
             ChatDB.open(function(d){
                 if(!d)return;
@@ -460,6 +460,29 @@ function openMaskEditor(mask,isNew){
                 '<div class="me-modal-label">Persona / Bio</div>'+
                 '<textarea class="me-modal-input me-modal-textarea" id="mmBio" placeholder="Logical, precise, structural thinker." maxlength="500">'+escapeHtml(mask.bio||'')+'</textarea>'+
             '</div>'+
+            '<div class="me-modal-field">'+
+                '<div class="me-modal-label">Bind to Entity · 绑定联系人</div>'+
+                '<div id="mmBindList" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">'+
+                    (function(){
+                        var ents=getEntities();
+                        var bound=mask.boundEntities||[];
+                        if(!ents.length)return '<div style="font-size:10px;color:rgba(26,26,31,0.25);">No entities yet</div>';
+                        var h='';
+                        ents.forEach(function(ent){
+                            var dn=ent.nickname||ent.name;
+                            var isBound=bound.indexOf(ent.id)>=0;
+                            h+='<div class="mm-bind-chip'+(isBound?' active':'')+'" data-eid="'+ent.id+'" style="'+
+                                'padding:5px 10px;border-radius:20px;font-size:10px;font-weight:600;cursor:pointer;transition:all 0.15s;'+
+                                'border:0.5px solid '+(isBound?'#1a1a1f':'rgba(26,26,31,0.1)')+';'+
+                                'background:'+(isBound?'#1a1a1f':'rgba(26,26,31,0.02)')+';'+
+                                'color:'+(isBound?'#fff':'rgba(26,26,31,0.5)')+';'+
+                            '">'+escapeHtml(dn)+'</div>';
+                        });
+                        return h;
+                    })()+
+                '</div>'+
+                '<div style="font-size:8px;color:rgba(26,26,31,0.2);margin-top:6px;line-height:1.4;">绑定后，与该联系人聊天时固定使用此面具身份，不受全局切换影响</div>'+
+            '</div>'+
             '<div class="me-modal-actions">'+
                 (isNew?'':'<button class="me-modal-btn danger" id="mmDelete">Delete</button>')+
                 '<button class="me-modal-btn cancel" id="mmCancel">Cancel</button>'+
@@ -521,21 +544,59 @@ function openMaskEditor(mask,isNew){
         if(e.target===modal)hide();
     });
 
+    // 绑定联系人芯片点击
+    var bindList=document.getElementById('mmBindList');
+    if(bindList){
+        bindList.querySelectorAll('.mm-bind-chip').forEach(function(chip){
+            chip.addEventListener('click',function(){
+                var isActive=chip.classList.contains('active');
+                if(isActive){
+                    chip.classList.remove('active');
+                    chip.style.border='0.5px solid rgba(26,26,31,0.1)';
+                    chip.style.background='rgba(26,26,31,0.02)';
+                    chip.style.color='rgba(26,26,31,0.5)';
+                }else{
+                    chip.classList.add('active');
+                    chip.style.border='0.5px solid #1a1a1f';
+                    chip.style.background='#1a1a1f';
+                    chip.style.color='#fff';
+                }
+            });
+        });
+    }
+
     // Save
     document.getElementById('mmSave').addEventListener('click',function(){
         var name=document.getElementById('mmName').value.trim();
         var bio=document.getElementById('mmBio').value.trim();
         if(!name){alert('Name is required.');return;}
+        // 收集绑定的联系人ID
+        var boundIds=[];
+        if(bindList){
+            bindList.querySelectorAll('.mm-bind-chip.active').forEach(function(chip){
+                boundIds.push(chip.dataset.eid);
+            });
+        }
         var allMasks=getMasks();
+        // 绑定是独占的：如果这个面具绑定了某个联系人，其他面具上要解除该联系人
+        if(boundIds.length>0){
+            allMasks.forEach(function(m){
+                if(m.id===mask.id)return;
+                if(!m.boundEntities)return;
+                m.boundEntities=m.boundEntities.filter(function(eid){
+                    return boundIds.indexOf(eid)===-1;
+                });
+            });
+        }
         if(isNew){
-            // 新建：默认不激活
-            allMasks.push({id:mask.id,name:name,bio:bio,avatar:mask.avatar||'',active:false});
+            allMasks.push({id:mask.id,name:name,bio:bio,avatar:mask.avatar||'',active:false,boundEntities:boundIds});
         }else{
             var target=allMasks.find(function(m){return m.id===mask.id;});
             if(target){
                 target.name=name;
                 target.bio=bio;
                 target.avatar=mask.avatar||'';
+                target.boundEntities=boundIds;
             }
         }
         saveMasks(allMasks);

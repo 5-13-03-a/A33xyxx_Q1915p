@@ -673,7 +673,17 @@
                 if (idx === -1) ent.charIds.push(cid);
                 else ent.charIds.splice(idx, 1);
                 saveEntries(entries);
-                renderChars();
+                // 只更新 toggle 状态和角色卡信息，不重渲整个列表
+                tog.classList.toggle('on');
+                // 更新角色卡上的携带数量和书名
+                var cardEl = container.querySelector('.c-card[data-cid="'+cid+'"]');
+                if(cardEl){
+                    var attached = entries.filter(function(e){ return e.enabled && e.charIds && e.charIds.indexOf(cid) !== -1; });
+                    var booksEl = cardEl.querySelector('.c-books');
+                    var countEl = cardEl.querySelector('.c-count');
+                    if(booksEl) booksEl.textContent = attached.length ? attached.map(function(e){ return e.name; }).join(' · ') : '未携带任何世界书';
+                    if(countEl){ countEl.textContent = attached.length + ' Books'; countEl.style.color = attached.length ? '' : 'var(--ink45)'; }
+                }
             });
         });
     }

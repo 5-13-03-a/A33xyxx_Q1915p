@@ -185,7 +185,7 @@ function renderPage1() {
                 </div>
                 <span class="app-label">Time</span>
             </div>
-            <div class="app-item">
+            <div class="app-item" onclick="if(window.openIntimacyArchive) window.openIntimacyArchive();">
                 <div class="app-icon dark">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M14 3v4a1 1 0 0 0 1 1h4"/>

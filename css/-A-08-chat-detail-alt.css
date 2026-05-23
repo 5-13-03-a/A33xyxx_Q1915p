@@ -1,6 +1,7 @@
 /* css/-A-08-chat-detail-alt.css · 聊天详情页（尾巴气泡版） */
 
 @font-face{font-family:"TheatreDeco";src:url("https://file.icve.com.cn/file_doc/SyNI8mvo/uZqcTvbY.ttf") format("truetype");font-display:swap;}
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
 
 .chat-detail-alt{
     position:fixed;inset:0;z-index:850;
@@ -59,10 +60,10 @@
 .cda-msg-av img{width:100%;height:100%;object-fit:cover;}
 .cda-msg-av.hidden{visibility:hidden;}
 .cda-bubble-wrap{position:relative;max-width:68%;}
-.cda-bubble{padding:8px 14px;font-size:13px;line-height:1.4;word-break:break-word;position:relative;z-index:2;border-radius:18px;overflow:hidden;}
+.cda-bubble{padding:8px 14px;font-size:13px;line-height:1.4;word-break:break-word;position:relative;z-index:2;border-radius:18px;overflow:hidden;font-family:'Share Tech Mono',monospace;}
 .cda-msg-row.sent .cda-bubble{background:#1a1a1f;color:rgba(255,255,255,0.9);}
 .cda-msg-row.received .cda-bubble{background:#F5F5F6;color:#1a1a1a;border:none;border-right:0.5px solid rgba(26,26,31,0.12);}
-.cda-bubble::after{
+.cda-bubble::before{
     content:"Story";
     position:absolute;
     bottom:-1px;
@@ -75,8 +76,8 @@
     white-space:nowrap;
     z-index:0;
 }
-.cda-msg-row.sent .cda-bubble::after{color:rgba(255,255,255,0.06);}
-.cda-msg-row.received .cda-bubble::after{color:rgba(0,0,0,0.12);}
+.cda-msg-row.sent .cda-bubble::before{color:rgba(255,255,255,0.06);}
+.cda-msg-row.received .cda-bubble::before{color:rgba(0,0,0,0.12);}
 
 /* 尾巴 */
 .cda-msg-row.sent.has-tail .cda-bubble-wrap::after{content:"";position:absolute;bottom:0;right:-8px;width:20px;height:15px;background:#1a1a1f;border-bottom-left-radius:14px;z-index:0;}
