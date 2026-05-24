@@ -6,6 +6,10 @@ window.onload = function () {
     setInterval(updateClock, 1000);
     initDesktopSwiper();
     renderPage1();
+    renderPage2();
+    if (window.applyGlobalTheme) {
+        window.applyGlobalTheme();
+    }
     console.log('✅ A0nynx_3i 启动');
 };
 
@@ -208,72 +212,32 @@ function renderPage1() {
 
         <!-- 图标下签名 -->
         <div class="grid-signature">Studio</div>
-
-        <!-- Dock 栏 -->
-        <div class="dock-bar">
-            <div class="dock-item">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                    <defs>
-                        <linearGradient id="g-phone" x1="3" y1="3" x2="21" y2="21" gradientUnits="userSpaceOnUse">
-                            <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.95"/>
-                            <stop offset="100%" stop-color="#888888" stop-opacity="0.55"/>
-                        </linearGradient>
-                    </defs>
-                    <path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.58.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1C10.57 21 3 13.43 3 4c0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.26.2 2.47.57 3.6.1.33.03.7-.24.97L6.6 10.8z"
-                          fill="url(#g-phone)" stroke="rgba(255,255,255,0.2)" stroke-width="0.4"/>
-                </svg>
-            </div>
-            <div class="dock-sep"></div>
-            <div class="dock-item" id="dockChatApp" onclick="openChatApp()">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                    <defs>
-                        <linearGradient id="g-mail-bg" x1="2" y1="5" x2="22" y2="19" gradientUnits="userSpaceOnUse">
-                            <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.14"/>
-                            <stop offset="100%" stop-color="#ffffff" stop-opacity="0.04"/>
-                        </linearGradient>
-                        <linearGradient id="g-mail-v" x1="2" y1="6" x2="22" y2="14" gradientUnits="userSpaceOnUse">
-                            <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.95"/>
-                            <stop offset="100%" stop-color="#aaaaaa" stop-opacity="0.5"/>
-                        </linearGradient>
-                    </defs>
-                    <rect x="2" y="5" width="20" height="15" rx="2.5"
-                          fill="url(#g-mail-bg)" stroke="rgba(255,255,255,0.22)" stroke-width="0.8"/>
-                    <path d="M2 7.5 L12 14 L22 7.5"
-                          stroke="url(#g-mail-v)" stroke-width="1.15"
-                          stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                </svg>
-            </div>
-            <div class="dock-sep"></div>
-            <div class="dock-item">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                    <defs>
-                        <linearGradient id="g-pin" x1="6" y1="2" x2="18" y2="17" gradientUnits="userSpaceOnUse">
-                            <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.92"/>
-                            <stop offset="100%" stop-color="#777777" stop-opacity="0.55"/>
-                        </linearGradient>
-                    </defs>
-                    <path d="M12 2C8.69 2 6 4.69 6 8c0 5.25 6 13 6 13s6-7.75 6-13c0-3.31-2.69-6-6-6z"
-                          fill="url(#g-pin)" stroke="rgba(255,255,255,0.18)" stroke-width="0.5"/>
-                    <circle cx="12" cy="8" r="2.4"
-                            fill="rgba(0,0,0,0.5)" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
-                </svg>
-            </div>
-            <div class="dock-sep"></div>
-            <div class="dock-item" id="dockSettings" onclick="openSettingsHub()">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                    <defs>
-                        <linearGradient id="g-gear"
- x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
-                            <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.9"/>
-                            <stop offset="100%" stop-color="#888888" stop-opacity="0.5"/>
-                        </linearGradient>
-                    </defs>
-                    <path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58z"
-                          fill="rgba(255,255,255,0.07)" stroke="url(#g-gear)" stroke-width="0.9" stroke-linejoin="round"/>
-                    <circle cx="12" cy="12" r="3"
-                            fill="rgba(0,0,0,0.45)" stroke="url(#g-gear)" stroke-width="0.9"/>
-                </svg>
-            </div>
-        </div>
     `;
+
+    // ── 全局 Dock 滑动变形 ──
+    initDockMorph();
+}
+
+function initDockMorph(){
+    var swiper=document.getElementById('swiper');
+    var dock=document.getElementById('globalDock');
+    var full=document.getElementById('gdFull');
+    var pill=document.getElementById('gdPill');
+    if(!swiper||!dock||!full||!pill)return;
+
+    swiper.addEventListener('scroll',function(){
+        var ratio=swiper.scrollLeft/swiper.clientWidth;
+        if(ratio>1)ratio=1;
+        if(ratio<0)ratio=0;
+
+        // full dock: 从 1 → 0 淡出 + 缩小
+        full.style.opacity=String(1-ratio);
+        full.style.transform='scale('+(1-ratio*0.3)+')';
+        full.style.pointerEvents=ratio>0.5?'none':'auto';
+
+        // pill: 从 0 → 1 淡入 + 放大
+        pill.style.opacity=String(ratio);
+        pill.style.transform='scale('+(0.7+ratio*0.3)+')';
+        pill.style.pointerEvents=ratio>0.5?'auto':'none';
+    },{passive:true});
 }

@@ -374,33 +374,6 @@ function renderSettings(entId){
             '</div>'+
         '</div>'+
 
-        '<div class="cs-ticket dark"><div class="cs-ticket-hd"><div class="cs-ticket-label">Prompt Engine · 提示词引擎</div><div class="cs-ticket-num">NO.03.7</div></div>'+
-            '<div class="cs-acc"><div class="cs-acc-hd"><div class="cs-acc-icon"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div><div class="cs-acc-info"><div class="cs-acc-name">行为引擎模式</div><div class="cs-acc-desc">Switch core behavioral framework</div></div><svg class="cs-acc-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>'+
-                '<div class="cs-acc-body"><div class="cs-acc-inner">'+
-                '<div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:12px;">选择 AI 角色的核心行为框架。切换后下一次调取即生效。</div>'+
-                '<div class="cs-prompt-grid" id="csPromptGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">'+
-                    (function(){
-                        var cur;try{cur=localStorage.getItem('ca-prompt-engine')||'default';}catch(e){cur='default';}
-                        var items=[
-                            {id:'default',name:'Standard',desc:'平衡型框架，适合日常对话'},
-                            {id:'advanced',name:'Immersive',desc:'深度沉浸，强自主性与情感细腻度'}
-                        ];
-                        var h='';
-                        items.forEach(function(it){
-                            var isActive=cur===it.id;
-                            h+='<div class="cs-prompt-item'+(isActive?' active':'')+'" data-prompt-engine="'+it.id+'" style="padding:14px 12px;border-radius:14px;cursor:pointer;border:0.5px solid rgba(255,255,255,'+(isActive?'0.35':'0.08')+');background:rgba(255,255,255,'+(isActive?'0.1':'0.03')+');transition:all 0.2s;display:flex;flex-direction:column;gap:6px;">'+
-                                '<div style="font-size:12px;font-weight:700;color:'+(isActive?'#fff':'rgba(255,255,255,0.5)')+';letter-spacing:0.3px;">'+it.name+'</div>'+
-                                '<div style="font-size:8px;color:rgba(255,255,255,'+(isActive?'0.4':'0.2')+');line-height:1.4;">'+it.desc+'</div>'+
-                            '</div>';
-                        });
-                        return h;
-                    })()+
-                '</div>'+
-                '<div style="font-size:8px;color:rgba(255,255,255,0.2);line-height:1.5;">Standard：结构化行为规则，角色独立性与安全框架并重。<br>Immersive：深度角色沉浸，强化自主生活感、情绪惯性与主动行为，适合长期陪伴型角色。</div>'+
-                '</div></div>'+
-            '</div>'+
-        '</div>'+
-
         '<div class="cs-ticket light"><div class="cs-ticket-hd"><div class="cs-ticket-label">Filter · 过滤</div><div class="cs-ticket-num">NO.04</div></div>'+
             '<div class="cs-acc"><div class="cs-acc-hd"><div class="cs-acc-icon"><svg viewBox="0 0 24 24"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg></div><div class="cs-acc-info"><div class="cs-acc-name">符号过滤</div><div class="cs-acc-desc">Hide specific characters from view</div></div><svg class="cs-acc-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>'+
                 '<div class="cs-acc-body"><div class="cs-acc-inner">'+
@@ -2041,29 +2014,6 @@ function bindSettingsEvents(entId){
 
         var initTgn;try{initTgn=localStorage.getItem('ca-tgn-style')||'off';}catch(e){initTgn='off';}
         renderTgnPreview(initTgn);
-    }
-
-    // 提示词引擎切换
-    var promptGrid=document.getElementById('csPromptGrid');
-    if(promptGrid){
-        promptGrid.querySelectorAll('.cs-prompt-item').forEach(function(item){
-            item.addEventListener('click',function(e){
-                e.stopPropagation();
-                promptGrid.querySelectorAll('.cs-prompt-item').forEach(function(i){
-                    i.classList.remove('active');
-                    i.style.borderColor='rgba(255,255,255,0.08)';
-                    i.style.background='rgba(255,255,255,0.03)';
-                    i.querySelector('div:first-child').style.color='rgba(255,255,255,0.5)';
-                    i.querySelector('div:last-child').style.color='rgba(255,255,255,0.2)';
-                });
-                item.classList.add('active');
-                item.style.borderColor='rgba(255,255,255,0.35)';
-                item.style.background='rgba(255,255,255,0.1)';
-                item.querySelector('div:first-child').style.color='#fff';
-                item.querySelector('div:last-child').style.color='rgba(255,255,255,0.4)';
-                localStorage.setItem('ca-prompt-engine',item.dataset.promptEngine);
-            });
-        });
     }
 
     // 标签 / 时间戳系统

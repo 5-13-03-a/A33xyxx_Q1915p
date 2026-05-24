@@ -320,9 +320,9 @@
 }
 
 /* ══════════════════════════════════════
-   Dock 栏
+   Dock 栏（已移至全局 global-dock）
 ══════════════════════════════════════ */
-.dock-bar {
+.dock-bar-legacy {
     position: absolute;
     bottom: calc(env(safe-area-inset-bottom, 20px) + 10px);
     left: 50%;

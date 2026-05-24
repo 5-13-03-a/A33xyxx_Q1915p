@@ -1,0 +1,319 @@
+/* css/-A-13-settings-customizer.css · A0nynx_3i 系统个性化微调面板 */
+
+.settings-customizer-panel {
+    position: absolute;
+    inset: 0;
+    background: #F8F8FA;
+    z-index: 1000;
+    transform: translateY(100%);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.settings-customizer-panel.active {
+    transform: translateY(0);
+}
+
+/* ── 滚动内容区 ── */
+.sc-scroll {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-top: calc(env(safe-area-inset-top, 44px) + 10px);
+    padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 40px);
+}
+.sc-scroll::-webkit-scrollbar { display: none; }
+
+/* ── 杂志风头部 ── */
+.sc-header {
+    padding: 20px 24px;
+    position: relative;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+.sc-header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+.sc-back-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #FFFFFF;
+    border: 1px solid rgba(21, 21, 23, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
+.sc-back-btn:active { transform: scale(0.9); }
+.sc-back-btn svg { width: 18px; height: 18px; stroke: #151517; }
+
+.sc-brand p {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #8E8E93;
+}
+.sc-brand h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 32px;
+    font-weight: 900;
+    font-style: italic;
+    letter-spacing: -1px;
+    line-height: 1;
+    margin-top: 4px;
+}
+.sc-coordinates {
+    font-family: monospace;
+    font-size: 7px;
+    color: #8E8E93;
+    text-align: right;
+    line-height: 1.4;
+}
+
+/* ── 模块通用样式 ── */
+.sc-section {
+    margin-bottom: 32px;
+}
+.sc-section-title {
+    padding: 0 24px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: #151517;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.sc-section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background-color: rgba(21, 21, 23, 0.05);
+}
+
+/* ── 1. 胶片卷轴壁纸选择器 ── */
+.sc-film-container {
+    width: 100%;
+    overflow-x: auto;
+    padding: 10px 24px 20px;
+    display: flex;
+    gap: 16px;
+}
+.sc-film-container::-webkit-scrollbar { display: none; }
+
+.sc-film-frame {
+    flex: 0 0 100px;
+    aspect-ratio: 9/16;
+    background: #FFFFFF;
+    border-radius: 12px;
+    padding: 6px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.03);
+    border: 1px solid rgba(21, 21, 23, 0.05);
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s;
+    transform: rotate(-1.5deg);
+}
+.sc-film-frame:nth-child(even) { transform: rotate(1.5deg); }
+.sc-film-frame.active {
+    transform: scale(1.05) rotate(0deg);
+    border-color: #151517;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+}
+.sc-film-thumb {
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
+    background-size: cover;
+    background-position: center;
+}
+.sc-film-frame::before {
+    content: '••••••••';
+    position: absolute;
+    top: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 8px;
+    letter-spacing: 4px;
+    color: rgba(21, 21, 23, 0.15);
+    opacity: 0.5;
+}
+
+.sc-upload-btn {
+    flex: 0 0 100px;
+    aspect-ratio: 9/16;
+    border-radius: 12px;
+    border: 1.5px dashed rgba(21, 21, 23, 0.15);
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transform: rotate(-1deg);
+    transition: all 0.2s;
+}
+.sc-upload-btn:active { transform: scale(0.95); background: #FFF; }
+.sc-upload-btn svg { width: 18px; height: 18px; stroke: #151517; fill: none; }
+.sc-upload-btn span { font-size: 7px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #8E8E93; }
+
+/* ── 2. 物理旋钮风格选择 ── */
+.sc-knob-row {
+    padding: 0 24px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+.sc-knob-option {
+    background: #FFFFFF;
+    border: 1px solid rgba(21, 21, 23, 0.05);
+    border-radius: 16px;
+    padding: 16px 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+.sc-knob-option.active {
+    border-color: #151517;
+    background: #151517;
+    color: #FFFFFF;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+}
+.sc-knob-dial {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(21, 21, 23, 0.15);
+    position: relative;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.sc-knob-option.active .sc-knob-dial { border-color: rgba(255,255,255,0.4); }
+.sc-knob-dial::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    height: 8px;
+    background-color: #151517;
+    border-radius: 1px;
+}
+.sc-knob-option.active .sc-knob-dial::after { background-color: #FFFFFF; }
+
+.sc-knob-option[data-style="glass"] .sc-knob-dial { transform: rotate(-45deg); }
+.sc-knob-option[data-style="outline"] .sc-knob-dial { transform: rotate(0deg); }
+.sc-knob-option[data-style="dark"] .sc-knob-dial { transform: rotate(45deg); }
+
+.sc-knob-title { font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+.sc-knob-desc { font-size: 7px; color: #8E8E93; }
+.sc-knob-option.active .sc-knob-desc { color: rgba(255,255,255,0.4); }
+
+/* ── 2.5 个人资料卡高定装饰选择 ── */
+.sc-deco-grid {
+    padding: 0 24px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+.sc-deco-option {
+    background: #FFFFFF;
+    border: 1px solid rgba(21, 21, 23, 0.05);
+    border-radius: 14px;
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.sc-deco-option.active {
+    border-color: #151517;
+    background: #151517;
+    color: #FFFFFF;
+}
+.sc-deco-title {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+.sc-deco-desc {
+    font-size: 7px;
+    color: #8E8E93;
+}
+.sc-deco-option.active .sc-deco-desc {
+    color: rgba(255,255,255,0.5);
+}
+
+/* ── 3. 物理推子调节面板 ── */
+.sc-sliders {
+    padding: 0 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+.sc-slider-group { display: flex; flex-direction: column; gap: 8px; }
+.sc-slider-info { display: flex; justify-content: space-between; font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+.sc-slider-info span:last-child { font-family: monospace; color: #8E8E93; }
+
+.sc-range {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 2px;
+    background: rgba(21, 21, 23, 0.15);
+    border-radius: 1px;
+    outline: none;
+}
+.sc-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #151517;
+    border: 2px solid #FFF;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+.sc-range::-webkit-slider-thumb:active { transform: scale(1.2); }
+.sc-slider-ticks { display: flex; justify-content: space-between; padding: 0 4px; }
+.sc-slider-ticks span { width: 1px; height: 4px; background: rgba(21, 21, 23, 0.15); }
+
+/* ── 4. 实时高保真预览 ── */
+.sc-preview { padding: 0 24px; }
+.sc-preview-card { background: #FFFFFF; border-radius: 28px; border: 1px solid rgba(21, 21, 23, 0.05); padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.02); }
+.sc-phone { width: 100%; aspect-ratio: 1; border-radius: 20px; position: relative; overflow: hidden; border: 1px solid rgba(21, 21, 23, 0.05); }
+.sc-phone-wp { position: absolute; inset: 0; z-index: 0; background-size: cover; background-position: center; transition: background-image 0.4s ease, background-color 0.4s ease; }
+.sc-phone-glass { position: absolute; inset: 0; z-index: 1; background: rgba(255, 255, 255, 0.15); transition: backdrop-filter 0.2s ease; }
+.sc-phone-grain { position: absolute; inset: 0; z-index: 2; pointer-events: none; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); transition: opacity 0.2s ease; }
+
+.sc-phone-grid { position: relative; z-index: 3; display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px 10px; padding: 24px 16px; }
+.sc-phone-app { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.sc-phone-ico { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.sc-phone-ico svg { width: 24px; height: 24px; stroke-width: 1.1; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+.sc-phone-label { font-size: 7.5px; font-weight: 700; color: #151517; letter-spacing: 0.5px; }
+
+.sc-phone-ico.style-glass { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid rgba(21, 21, 23, 0.05); box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
+.sc-phone-ico.style-glass svg { stroke: #48484A; }
+.sc-phone-ico.style-outline { background: transparent; border: 1.5px solid rgba(21, 21, 23, 0.12); }
+.sc-phone-ico.style-outline svg { stroke: rgba(21, 21, 23, 0.65); }
+.sc-phone-ico.style-dark { background: #151517; border: 1px solid rgba(255, 255, 255, 0.06); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.sc-phone-ico.style-dark svg { stroke: rgba(255, 255, 255, 0.85); }

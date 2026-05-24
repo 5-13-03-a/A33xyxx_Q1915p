@@ -1,0 +1,481 @@
+/* css/-A-12-page2.css · Page 2 桌面样式 */
+
+/* ── 背景装饰层 ── */
+.p2-arch{
+    position:absolute;top:-50%;left:-50%;width:200%;height:200%;z-index:0;pointer-events:none;
+    background:linear-gradient(105deg,rgba(255,255,255,0) 20%,rgba(255,255,255,0.9) 35%,rgba(255,255,255,1) 50%,rgba(255,255,255,0.9) 65%,rgba(255,255,255,0) 80%);
+    filter:blur(25px);animation:ld 20s ease-in-out infinite alternate;
+}
+@keyframes ld{0%{transform:translateY(-10%) translateX(-10%) rotate(0deg);}100%{transform:translateY(10%) translateX(10%) rotate(5deg);}}
+.p2-grain{position:absolute;inset:0;z-index:1;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.02'/%3E%3C/svg%3E");}
+.p2-wm{position:absolute;top:35%;left:-15%;font-family:'Playfair Display',serif;font-size:220px;font-weight:900;font-style:italic;color:rgba(21,21,23,0.02);z-index:2;pointer-events:none;transform:rotate(-90deg) translateY(-50%);letter-spacing:-5px;}
+
+/* ── 散落装饰 ── */
+.spark{position:absolute;pointer-events:none;z-index:3;color:rgba(21,21,23,0.07);line-height:1;}
+.spark.dark{color:rgba(21,21,23,0.12);}
+
+/* ── 滚动容器 ── */
+.p2-scroll{
+    position:absolute;inset:0;z-index:5;
+    overflow-y:auto;overflow-x:hidden;
+    padding-top:calc(env(safe-area-inset-top,44px) + 10px);
+    padding-bottom:calc(80px + env(safe-area-inset-bottom,20px));
+    scrollbar-width:none;
+}
+.p2-scroll::-webkit-scrollbar{display:none;}
+
+/* ══════ 个人资料卡（极致对称与黄金分割比例） ══════ */
+.p2-card{margin:0 18px;background:#fff;border-radius:28px;border:none;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.035);position:relative;z-index:1;}
+.p2-card-bg-img {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background-size: cover;
+    background-position: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+    -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.8) 35%, rgba(0,0,0,0) 80%);
+    mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.8) 35%, rgba(0,0,0,0) 80%);
+}
+.p2-banner{height:165px;background:#fff;position:relative;cursor:pointer;transition:opacity 0.2s;z-index: 2;}
+.p2-banner:active{opacity:0.95;}
+.p2-banner::after{content:none;}
+.p2-banner-img{
+    position:absolute;
+    inset:0;
+    background-size:cover;
+    background-position:center;
+    opacity:0;
+    transition:opacity 0.3s;
+    z-index:0;
+    -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 55%, rgba(0,0,0,0) 100%);
+    mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 55%, rgba(0,0,0,0) 100%);
+}
+.p2-banner-overlay{position:absolute;bottom:0;left:0;right:0;height:45px;background:linear-gradient(to bottom,transparent 0%,rgba(255,255,255,0.4) 45%,#fff 100%);z-index:2;pointer-events:none;}
+.p2-banner-wm{position:absolute;bottom:6px;right:16px;font-family:'Great Vibes',cursive;font-size:22px;color:rgba(255,255,255,0.08);z-index:3;}
+.p2-avatar{width:124px;height:124px;border-radius:50%;border:4px solid #fff;background:#dcdcdc;position:relative;margin:-62px auto 0;z-index:6;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 18px rgba(0,0,0,0.07);cursor:pointer;transition:transform 0.2s;}
+.p2-avatar:active{transform:scale(0.94);}
+.p2-avatar-inner{width:100%;height:100%;border-radius:50%;background:linear-gradient(135deg,#e2e2e4,#ececef);display:flex;align-items:center;justify-content:center;font-size:28px;color:rgba(21,21,23,0.15);overflow:hidden;}
+.p2-info{text-align:center;padding:16px 24px 0;display:flex;flex-direction:column;align-items:center;gap:0;width:100%;}
+.p2-name{font-family:'Space Grotesk',-apple-system,sans-serif;font-size:20px;font-weight:900;color:#151517;letter-spacing:-0.3px;}
+.p2-tag{font-size:9px;color:rgba(21,21,23,0.3);letter-spacing:1px;margin-top:4px;font-weight:600;}
+.p2-bio{font-size:11px;color:rgba(21,21,23,0.45);margin-top:6px;letter-spacing:0.2px;font-weight:500;}
+.p2-loc{display:inline-flex;align-items:center;justify-content:center;gap:4px;font-size:9px;color:rgba(21,21,23,0.3);margin-top:12px;margin-bottom:8px;font-weight:600;background:rgba(21,21,23,0.03);padding:3px 12px;border-radius:20px;max-width:max-content;}
+.p2-loc svg{width:10px;height:10px;stroke:rgba(21,21,23,0.4);fill:none;stroke-width:2.5;flex-shrink:0;}
+
+/* 可编辑文案（完美匹配 Space Grotesk 字体排版，修复文字不对劲问题） */
+.p2-editable{border:none;background:transparent;outline:none;text-align:center;width:100%;font-family:inherit;cursor:text;-webkit-user-select:auto;user-select:auto;padding:0;}
+.p2-editable:focus{background:rgba(21,21,23,0.02);border-radius:8px;padding:2px 6px;}
+.p2-editable.p2-name-edit{font-family:'Space Grotesk',-apple-system,sans-serif;font-size:20px;font-weight:900;color:#151517;letter-spacing:-0.3px;}
+.p2-editable.p2-tag-edit{font-family:'Space Grotesk',-apple-system,sans-serif;font-size:9px;color:rgba(21,21,23,0.3);letter-spacing:1px;margin-top:4px;font-weight:600;}
+.p2-editable.p2-bio-edit{font-family:'Space Grotesk',-apple-system,sans-serif;font-size:11px;color:rgba(21,21,23,0.45);margin-top:6px;letter-spacing:0.2px;font-weight:500;}
+.p2-editable.p2-loc-edit{font-family:'Space Grotesk',-apple-system,sans-serif;font-size:9px;color:rgba(21,21,23,0.3);border:none;background:transparent;outline:none;width:auto;max-width:140px;text-align:center;font-weight:600;}
+.p2-editable.p2-loc-edit:focus{background:rgba(21,21,23,0.02);border-radius:6px;padding:1px 4px;}
+
+/* ── 个人资料卡 5 种高定装饰样式 ── */
+.p2-card .swiss-crosshair,
+.p2-card .swiss-scale,
+.p2-card .swiss-coords,
+.p2-card .celestial-orbit-bg,
+.p2-card .botanical-overlay,
+.p2-card .blueprint-grid,
+.p2-card .blueprint-line,
+.p2-card .tag-barcode,
+.p2-card .tag-stamp {
+    display: none;
+}
+
+/* Style A: Swiss Instrument */
+.p2-card.deco-swiss::before {
+    content: '';
+    position: absolute;
+    inset: 12px;
+    border: 1px solid rgba(21, 21, 23, 0.03);
+    border-radius: 20px;
+    pointer-events: none;
+    z-index: 10;
+}
+.p2-card.deco-swiss .swiss-crosshair,
+.p2-card.deco-swiss .swiss-scale,
+.p2-card.deco-swiss .swiss-coords {
+    display: block;
+}
+.p2-card .swiss-crosshair {
+    position: absolute;
+    width: 20px; height: 20px;
+    pointer-events: none;
+    z-index: 10;
+}
+.p2-card .swiss-ch-tl { top: 20px; left: 20px; border-top: 1px solid rgba(21,21,23,0.2); border-left: 1px solid rgba(21,21,23,0.2); }
+.p2-card .swiss-ch-tr { top: 20px; right: 20px; border-top: 1px solid rgba(21,21,23,0.2); border-right: 1px solid rgba(21,21,23,0.2); }
+.p2-card .swiss-scale {
+    position: absolute;
+    bottom: 20px; left: 24px; right: 24px;
+    height: 6px;
+    background: repeating-linear-gradient(to right, rgba(21,21,23,0.15), rgba(21,21,23,0.15) 1px, transparent 1px, transparent 6px);
+    opacity: 0.6;
+    z-index: 10;
+}
+.p2-card .swiss-coords {
+    position: absolute;
+    top: 16px; right: 24px;
+    font-family: monospace;
+    font-size: 6.5px;
+    color: rgba(21,21,23,0.3);
+    letter-spacing: 0.5px;
+    z-index: 10;
+}
+
+/* Style B: Celestial Orbit */
+.p2-card.deco-celestial .celestial-orbit-bg {
+    display: block;
+}
+.p2-card .celestial-orbit-bg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+}
+.p2-card .celestial-orbit-bg::before {
+    content: '';
+    position: absolute;
+    top: -20px; left: 50%;
+    transform: translateX(-50%);
+    width: 220px; height: 220px;
+    border-radius: 50%;
+    border: 1px solid rgba(21, 21, 23, 0.05);
+    box-shadow: 0 0 0 16px rgba(21,21,23,0.01);
+}
+.p2-card .celestial-star {
+    position: absolute;
+    font-size: 8px;
+    color: rgba(21, 21, 23, 0.2);
+}
+
+/* Style C: Atelier Botanical */
+.p2-card.deco-botanical .botanical-overlay {
+    display: block;
+}
+.p2-card .botanical-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.08;
+}
+
+/* Style D: Blueprint Draft */
+.p2-card.deco-blueprint .blueprint-grid,
+.p2-card.deco-blueprint .blueprint-line {
+    display: block;
+}
+.p2-card .blueprint-grid {
+    position: absolute;
+    inset: 0;
+    background-image: 
+        linear-gradient(to right, rgba(21,21,23,0.015) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(21,21,23,0.015) 1px, transparent 1px);
+    background-size: 14px 14px;
+    pointer-events: none;
+    z-index: 1;
+}
+.p2-card .blueprint-line {
+    position: absolute;
+    top: 165px; left: 10%; right: 10%;
+    height: 1px;
+    background: rgba(21, 21, 23, 0.08);
+    z-index: 5;
+}
+.p2-card .blueprint-line::before, .p2-card .blueprint-line::after {
+    content: '';
+    position: absolute;
+    top: -3px;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #fff;
+    border: 1px solid rgba(21,21,23,0.2);
+}
+.p2-card .blueprint-line::before { left: 0; }
+.p2-card .blueprint-line::after { right: 0; }
+
+/* Style E: Deconstructed Tag */
+.p2-card.deco-tag .tag-barcode,
+.p2-card.deco-tag .tag-stamp {
+    display: block;
+}
+.p2-card .tag-barcode {
+    position: absolute;
+    top: 16px; left: 24px;
+    width: 45px; height: 14px;
+    background: repeating-linear-gradient(to right, #151517, #151517 1px, transparent 1px, transparent 3px, #151517 3px, #151517 4px, transparent 4px, transparent 6px);
+    opacity: 0.7;
+    z-index: 10;
+}
+.p2-card .tag-stamp {
+    position: absolute;
+    top: 60px; right: 20px;
+    width: 32px; height: 32px;
+    border: 1.5px solid #A63426;
+    border-radius: 50%;
+    color: #A63426;
+    font-size: 6px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: rotate(12deg);
+    opacity: 0.45;
+    z-index: 10;
+    letter-spacing: 0.5px;
+}
+
+/* 日历（完美融入卡片底部的绝对对称式瑞士仪表盘设计） */
+.p2-cal{
+    padding:16px 24px 20px;
+    border-top: 1px solid rgba(21, 21, 23, 0.05); /* 替代外部粗糙分割线，实现完美对齐 */
+    width: 100%;
+}
+.p2-cal-row{
+    display:grid;
+    grid-template-columns:repeat(7, 1fr);
+    text-align:center;
+    align-items:center;
+    justify-items:center;
+}
+.p2-cal-d{
+    font-family: 'Space Grotesk', -apple-system, sans-serif;
+    font-size:7px;
+    font-weight:800;
+    color:rgba(21,21,23,0.2);
+    letter-spacing:0.8px;
+    padding:4px 0;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    text-transform:uppercase;
+}
+.p2-cal-n{
+    font-family: 'Space Grotesk', -apple-system, sans-serif;
+    font-size:10px;
+    font-weight:600;
+    color:rgba(21,21,23,0.4);
+    height:28px;
+    width:28px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    position:relative;
+}
+.p2-cal-n.today{
+    background:#151517;
+    color:#fff !important;
+    border-radius:50%;
+    width:22px;
+    height:22px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    font-size:9px;
+    font-weight:800;
+}
+
+/* ══════ App 桌面区 ══════ */
+.p2-apps{position:relative;z-index:10;padding:24px 18px 0;}
+.p2-apps-title{font-size:8px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:rgba(21,21,23,0.18);text-align:center;margin-bottom:20px;}
+.p2-grid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:auto;gap:18px 10px;}
+
+/* 大号音乐 Widget（融入高定印刷感与点线面排版） */
+.p2-avatar-inner{width:100%;height:100%;border-radius:50%;background:linear-gradient(135deg,#e2e2e4,#ececef);display:flex;align-items:center;justify-content:center;font-size:24px;color:rgba(21,21,23,0.15);overflow:hidden;}
+.p2-info{text-align:center;padding:12px 24px 0;display:flex;flex-direction:column;align-items:center;gap:0;width:100%;position:relative;z-index:2;}
+.p2-name{font-family:'Space Grotesk',-apple-system,sans-serif;font-size:20px;font-weight:900;color:#151517;letter-spacing:-0.3px;}
+.p2-tag{font-size:9px;color:rgba(21,21,23,0.3);letter-spacing:1px;margin-top:4px;font-weight:600;}
+.p2-bio{font-size:11px;color:rgba(21,21,23,0.45);margin-top:6px;letter-spacing:0.2px;font-weight:500;}
+.p2-loc{display:flex;align-items:center;justify-content:center;gap:4px;font-size:9px;color:rgba(21,21,23,0.3);margin-top:12px;margin-bottom:8px;font-weight:600;background:rgba(21,21,23,0.03);padding:3px 10px;border-radius:20px;}
+.p2-loc svg{width:10px;height:10px;stroke:rgba(21,21,23,0.4);fill:none;stroke-width:2.5;}
+
+/* 头像上方五角星虚线拱门与散落星星 */
+.p2-avatar-star-arch{position:absolute;top:-74px;left:50%;transform:translateX(-50%);width:160px;height:80px;border-top:1.5px dashed rgba(21,21,23,0.15);border-radius:160px 160px 0 0;pointer-events:none;z-index:5;}
+.p2-avatar-star-arch::before, .p2-avatar-star-arch::after{content:'★';position:absolute;font-size:8px;color:rgba(21,21,23,0.18);bottom:-4px;}
+.p2-avatar-star-arch::before{left:-2px;}
+.p2-avatar-star-arch::after{right:-2px;}
+.p2-star-scatter{position:absolute;pointer-events:none;z-index:5;line-height:1;color:rgba(21,21,23,0.15);font-size:10px;}
+
+/* 大号音乐 Widget（占 2x2，解决溢出裁剪问题） */
+.p2-w-music{grid-column:span 2;grid-row:span 2;display:flex;flex-direction:column;align-items:center;gap:6px;transition:transform 0.2s;}
+.p2-w-music:active{transform:scale(0.98);}
+.p2-wm-box{width:100%;aspect-ratio:1;background:#fff;border-radius:18px;border:1px solid rgba(21,21,23,0.05);box-shadow:0 4px 16px rgba(0,0,0,0.02);position:relative;overflow:visible;padding:12px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;}
+.p2-wm-box::before{content:'';position:absolute;inset:0;background-image:linear-gradient(to right,rgba(21,21,23,0.012) 1px,transparent 1px),linear-gradient(to bottom,rgba(21,21,23,0.012) 1px,transparent 1px);background-size:8px 8px;pointer-events:none;border-radius:18px;z-index:3;}
+.p2-wm-box::after{content:'';position:absolute;left:0;top:16px;bottom:16px;width:2px;background:repeating-linear-gradient(to bottom,rgba(21,21,23,0.6),rgba(21,21,23,0.6) 2px,transparent 2px,transparent 5px);opacity:0.8;z-index:3;}
+.p2-wm-cover{width:100%;height:100%;border-radius:10px;background:transparent;position:relative;overflow:visible;display:flex;flex-direction:column;justify-content:space-between;}
+.p2-wm-label{font-size:8px;font-weight:700;color:rgba(21,21,23,0.35);letter-spacing:1px;text-transform:uppercase;}
+
+/* ── Now Playing 左侧卡片背景图（左实右虚渐变，不影响底纹） ── */
+.p2-wm-bg-img{
+    position:absolute;
+    inset:0;
+    border-radius:18px;
+    background-size:cover;
+    background-position:left center;
+    opacity:0;
+    transition:opacity 0.3s;
+    z-index:1;
+    pointer-events:none;
+    -webkit-mask-image:linear-gradient(to right,rgba(0,0,0,1) 0%,rgba(0,0,0,1) 35%,rgba(0,0,0,0) 85%);
+    mask-image:linear-gradient(to right,rgba(0,0,0,1) 0%,rgba(0,0,0,1) 35%,rgba(0,0,0,0) 85%);
+}
+
+/* ── Now Playing 左侧卡片专属元素 ── */
+.p2-np-header{display:flex;justify-content:space-between;align-items:center;width:100%;position:relative;z-index:4;}
+.p2-np-badge{font-size:6.5px;font-weight:900;letter-spacing:1.2px;text-transform:uppercase;background:#151517;color:#fff;padding:1.5px 4px;border-radius:2px;}
+.p2-np-serial{font-size:6.5px;font-family:monospace;color:rgba(21,21,23,0.35);letter-spacing:0.5px;}
+.p2-np-meta{margin-top:auto;margin-bottom:10px;position:relative;z-index:4;padding-left:4px;text-align:left;width:60%;}
+.p2-np-title{font-family:'Playfair Display',serif;font-size:14px;font-weight:700;font-style:italic;color:#151517;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.p2-np-artist{font-size:7.5px;font-weight:700;text-transform:uppercase;color:rgba(21,21,23,0.4);letter-spacing:0.8px;margin-top:1px;}
+.p2-np-progress{position:relative;z-index:4;padding-left:4px;width:60%;}
+.p2-np-time{display:flex;justify-content:space-between;font-size:6.5px;font-weight:700;color:rgba(21,21,23,0.35);margin-bottom:3px;}
+.p2-np-bar-bg{width:100%;height:1.5px;background-color:rgba(21,21,23,0.06);position:relative;border-radius:1px;}
+.p2-np-bar-fill{width:45%;height:100%;background-color:#151517;border-radius:1px;}
+.p2-np-bar-point{position:absolute;left:45%;top:50%;transform:translate(-50%,-50%);width:3.5px;height:3.5px;background-color:#151517;border-radius:50%;}
+
+/* ── 唱片容器与通用 ── */
+.p2-vinyl-wrap{
+    position:absolute;
+    width:80%;
+    height:80%;
+    right:-20%;
+    top:50%;
+    z-index:5;
+    cursor:pointer;
+}
+.p2-vinyl{position:absolute;width:100%;height:100%;top:0;left:0;border-radius:50%;box-shadow:0 4px 12px rgba(0,0,0,0.2);}
+
+/* Style A: Classic */
+.p2-vinyl-a{
+    background:repeating-radial-gradient(circle at center,#0a0a0a 0px,#1a1a1a 1px,#0f0f0f 2px,#1c1c1c 3px);
+    border:2.5px solid rgba(21,21,23,0.8);
+    animation:p2spin 4s linear infinite;
+}
+.p2-vinyl-a::before{content:'';position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 45deg,rgba(255,255,255,0) 10%,rgba(255,255,255,0.15) 20%,rgba(255,255,255,0) 30%,rgba(255,255,255,0) 60%,rgba(255,255,255,0.12) 70%,rgba(255,255,255,0) 80%);}
+.p2-vinyl-a::after{content:'';position:absolute;top:50%;left:50%;width:36%;height:36%;border-radius:50%;transform:translate(-50%,-50%);background:radial-gradient(circle at 35% 35%,#fff,#e8e8ea);border:1px solid rgba(0,0,0,0.15);box-shadow:0 2px 6px rgba(0,0,0,0.15);}
+.p2-vinyl-a .p2v-hole{position:absolute;top:50%;left:50%;width:8px;height:8px;border-radius:50%;background:#0a0a0a;transform:translate(-50%,-50%);z-index:2;box-shadow:inset 0 1px 2px rgba(0,0,0,0.8),0 0.5px 0 rgba(255,255,255,0.5);}
+
+/* Style B: Smoky */
+.p2-vinyl-b{
+    background:repeating-radial-gradient(circle at center,rgba(40,40,40,0.6) 0px,rgba(60,60,60,0.4) 1px,rgba(30,30,30,0.5) 2px);
+    border:2px solid rgba(21,21,23,0.3);
+    box-shadow:0 8px 24px rgba(0,0,0,0.12),inset 0 0 20px rgba(0,0,0,0.1);
+    animation:p2spin 5s linear infinite;
+}
+.p2-vinyl-b::before{content:'';position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 120deg,rgba(255,255,255,0) 0%,rgba(255,255,255,0.08) 15%,rgba(255,255,255,0) 30%,rgba(255,255,255,0.06) 50%,rgba(255,255,255,0) 65%);}
+.p2-vinyl-b .p2v-label{position:absolute;top:50%;left:50%;width:40%;height:40%;border-radius:50%;transform:translate(-50%,-50%);background:linear-gradient(135deg,#f5e6d3,#e8d4c0);border:1px solid rgba(0,0,0,0.1);box-shadow:inset 0 2px 4px rgba(255,255,255,0.5);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;}
+.p2-vinyl-b .p2v-label::after{content:'';width:6px;height:6px;border-radius:50%;background:#1a1a1f;box-shadow:inset 0 1px 2px rgba(0,0,0,0.6);}
+.p2-vinyl-b .p2v-text{font-size:5px;font-weight:700;letter-spacing:1.5px;color:rgba(21,21,23,0.4);text-transform:uppercase;}
+
+/* Style C: Holographic */
+.p2-vinyl-c{
+    background:conic-gradient(from 0deg,#111,#222,#111,#1a1a1a,#111);
+    border:2.5px solid #1a1a1f;
+    animation:p2spin 3.5s linear infinite;
+}
+.p2-vinyl-c::before{content:'';position:absolute;inset:8px;border-radius:50%;background:conic-gradient(from 0deg,rgba(255,100,100,0.08),rgba(255,200,50,0.08),rgba(100,255,100,0.08),rgba(50,200,255,0.08),rgba(150,100,255,0.08),rgba(255,100,150,0.08),rgba(255,100,100,0.08));filter:blur(2px);}
+.p2-vinyl-c::after{content:'';position:absolute;inset:0;border-radius:50%;background:repeating-radial-gradient(circle at center,transparent 0px,transparent 2px,rgba(255,255,255,0.03) 2px,rgba(255,255,255,0.03) 3px);}
+.p2-vinyl-c .p2v-center{position:absolute;top:50%;left:50%;width:34%;height:34%;border-radius:50%;transform:translate(-50%,-50%);background:#1a1a1f;border:1.5px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;z-index:2;}
+.p2-vinyl-c .p2v-center::after{content:'';width:7px;height:7px;border-radius:50%;background:#e8e8ea;box-shadow:inset 0 1px 2px rgba(0,0,0,0.4);}
+
+/* Style D: Minimal White */
+.p2-vinyl-d{
+    background:repeating-radial-gradient(circle at center,#fafafa 0px,#f0f0f0 1px,#f5f5f5 2px,#ebebeb 3px);
+    border:2px solid rgba(21,21,23,0.08);
+    box-shadow:0 8px 24px rgba(0,0,0,0.06),inset 0 0 0 1px rgba(21,21,23,0.04);
+    animation:p2spin 6s linear infinite;
+}
+.p2-vinyl-d::before{content:'';position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 90deg,rgba(0,0,0,0) 10%,rgba(0,0,0,0.03) 25%,rgba(0,0,0,0) 40%,rgba(0,0,0,0.02) 60%,rgba(0,0,0,0) 75%);}
+.p2-vinyl-d .p2v-center{position:absolute;top:50%;left:50%;width:38%;height:38%;border-radius:50%;transform:translate(-50%,-50%);background:#fff;border:1px solid rgba(21,21,23,0.06);box-shadow:0 2px 8px rgba(0,0,0,0.04);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;z-index:2;}
+.p2-vinyl-d .p2v-title{font-size:6px;font-weight:800;letter-spacing:1px;color:rgba(21,21,23,0.5);text-transform:uppercase;}
+.p2-vinyl-d .p2v-dot{width:5px;height:5px;border-radius:50%;background:rgba(21,21,23,0.15);box-shadow:inset 0 1px 2px rgba(0,0,0,0.2);}
+
+/* Style E: Vintage Paper */
+.p2-vinyl-e{
+    background:repeating-radial-gradient(circle at center,#1a1a1a 0px,#252525 1.5px,#181818 3px);
+    border:2px solid rgba(21,21,23,0.6);
+    box-shadow:0 8px 24px rgba(0,0,0,0.18),0 2px 4px rgba(0,0,0,0.1);
+    animation:p2spin 4.5s linear infinite;
+}
+.p2-vinyl-e::before{content:'';position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 30% 25%,rgba(255,255,255,0.06) 0%,transparent 40%),radial-gradient(circle at 70% 75%,rgba(255,255,255,0.04) 0%,transparent 30%);}
+.p2-vinyl-e::after{content:'';position:absolute;inset:0;border-radius:50%;background:repeating-radial-gradient(circle at center,transparent 0px,transparent 4px,rgba(255,255,255,0.015) 4px,rgba(255,255,255,0.015) 5px);}
+.p2-vinyl-e .p2v-ring{position:absolute;top:50%;left:50%;width:60%;height:60%;border-radius:50%;transform:translate(-50%,-50%);border:0.5px solid rgba(255,255,255,0.06);z-index:1;}
+.p2-vinyl-e .p2v-label{position:absolute;top:50%;left:50%;width:42%;height:42%;border-radius:50%;transform:translate(-50%,-50%);background:linear-gradient(145deg,#f4efe8,#e8e2d8);border:1px solid rgba(0,0,0,0.08);box-shadow:inset 0 1px 3px rgba(255,255,255,0.6),0 2px 6px rgba(0,0,0,0.1);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;z-index:2;}
+.p2-vinyl-e .p2v-label::before{content:'';position:absolute;inset:4px;border-radius:50%;border:0.5px dashed rgba(21,21,23,0.1);}
+.p2-vinyl-e .p2v-title{font-size:5.5px;font-weight:700;letter-spacing:1px;color:rgba(60,50,40,0.5);text-transform:uppercase;}
+.p2-vinyl-e .p2v-sub{font-size:4px;color:rgba(60,50,40,0.3);letter-spacing:0.5px;}
+.p2-vinyl-e .p2v-hole{width:6px;height:6px;border-radius:50%;background:#1a1a1f;box-shadow:inset 0 1px 2px rgba(0,0,0,0.8);margin-top:3px;}
+
+/* 隐藏非当前唱片 */
+.p2-vinyl{display:none;}
+.p2-vinyl.active{display:block;}
+
+@keyframes p2spin{from{transform:translateY(-50%) rotate(0deg);}to{transform:translateY(-50%) rotate(360deg);}}
+
+/* 普通 App 图标 */
+.p2-app{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;transition:transform 0.2s;}
+.p2-app:active{transform:scale(0.85);}
+.p2-ico{width:52px;height:52px;border-radius:15px;display:flex;align-items:center;justify-content:center;position:relative;}
+.p2-ico.glass{background:rgba(255,255,255,0.65);backdrop-filter:blur(25px) saturate(130%);-webkit-backdrop-filter:blur(25px) saturate(130%);border:1px solid rgba(21,21,23,0.06);box-shadow:0 4px 12px rgba(0,0,0,0.03);}
+.p2-ico.dark{background:#151517;border:1px solid rgba(255,255,255,0.06);box-shadow:0 6px 16px rgba(0,0,0,0.1);}
+.p2-ico.outline{background:transparent;border:1.5px solid rgba(21,21,23,0.08);}
+.p2-ico svg{width:24px;height:24px;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round;fill:none;}
+.p2-ico.glass svg{stroke:#48484A;}
+.p2-ico.dark svg{stroke:rgba(255,255,255,0.85);}
+.p2-ico.outline svg{stroke:rgba(21,21,23,0.3);}
+.p2-app-l{font-size:8px;font-weight:600;color:rgba(21,21,23,0.4);letter-spacing:0.3px;}
+.p2-ico-star{position:absolute;top:-4px;right:-4px;font-size:10px;color:rgba(21,21,23,0.15);pointer-events:none;}
+
+/* 搜索栏 */
+.p2-search{grid-column:span 4;display:flex;justify-content:center;margin-top:4px;}
+.p2-search-bar{background:rgba(255,255,255,0.65);backdrop-filter:blur(25px) saturate(130%);-webkit-backdrop-filter:blur(25px) saturate(130%);border-radius:50px;padding:10px 24px;display:flex;align-items:center;gap:8px;border:1px solid rgba(21,21,23,0.06);box-shadow:0 4px 12px rgba(0,0,0,0.02);font-size:11px;color:rgba(21,21,23,0.35);cursor:pointer;transition:transform 0.2s;}
+.p2-search-bar:active{transform:scale(0.96);}
+.p2-search-bar svg{width:14px;height:14px;stroke:rgba(21,21,23,0.3);fill:none;stroke-width:2;stroke-linecap:round;}
+
+/* ══════ 全局 Dock（跨页面变形） ══════ */
+.global-dock{
+    position:absolute;
+    bottom:55px;
+    left:50%;transform:translateX(-50%);
+    z-index:50;
+    display:flex;align-items:center;justify-content:center;
+    pointer-events:none;
+}
+.global-dock>*{pointer-events:auto;}
+
+/* ── 完整 Dock（Page 1） ── */
+.gd-full{
+    height:60px;width:max-content;padding:0 16px;gap:12px;
+    background:#000;border-radius:40px;display:flex;align-items:center;
+    border:1px solid rgba(255,255,255,0.15);
+    box-shadow:0 20px 50px rgba(0,0,0,0.4),0 8px 16px rgba(0,0,0,0.25),inset 0 1px 0 rgba(255,255,255,0.18),inset 0 -1px 0 rgba(255,255,255,0.04);
+    transition:opacity 0.3s,transform 0.3s;
+    position:absolute;
+}
+.gd-full::before{content:'';position:absolute;top:1px;left:16px;right:16px;height:1px;background:linear-gradient(to right,transparent,rgba(255,255,255,0.3) 25%,rgba(255,255,255,0.45) 50%,rgba(255,255,255,0.3) 75%,transparent);border-radius:50%;pointer-events:none;}
+.gd-item{width:40px;height:40px;border-radius:50%;display:flex;justify-content:center;align-items:center;cursor:pointer;position:relative;transition:transform 0.2s;background:rgba(255,255,255,0.12);}
+.gd-item:active{transform:scale(0.82);background:rgba(255,255,255,0.07);}
+.gd-sep{width:1px;height:22px;flex-shrink:0;background:linear-gradient(to bottom,transparent,rgba(255,255,255,0.18) 30%,rgba(255,255,255,0.18) 70%,transparent);}
+
+/* ── 胶囊 Pill（Page 2） ── */
+.gd-pill{
+    height:44px;padding:0 18px;
+    background:rgba(255,255,255,0.45);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+    border-radius:50px;display:flex;align-items:center;gap:8px;
+    border:1.5px solid #151517;
+    box-shadow:0 8px 24px rgba(0,0,0,0.05);
+    cursor:pointer;
+    transition:opacity 0.3s,transform 0.3s;
+    opacity:0;transform:scale(0.7);
+    pointer-events:none;
+    position:absolute;
+}
+.gd-pill:active{transform:scale(0.92);}
+.gd-pill-icon{width:20px;height:20px;display:flex;align-items:center;justify-content:center;}
+.gd-pill-icon svg{width:20px;height:20px;}
+.gd-pill-label{font-size:9px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#151517;}
